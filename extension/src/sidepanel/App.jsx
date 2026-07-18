@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-
 import { loginGoogle } from "../api/googleAuth";
-import { getGoogleDocument } from "../api/googleDocs";
+import { getGoogleDocument, getGoogleDocsRevisions } from "../api/googleDocs";
 import { getRevisions } from "../api/googleDrive";
 import { extractText } from "../parser/documentParser";
 import { parseModelChunk } from "../parser/chunkParser";
@@ -11,10 +10,10 @@ export default function App() {
   const [doc, setDoc] = useState(null);
   const [googleToken, setGoogleToken] = useState(null);
   const [documentData, setDocumentData] = useState(null);
+  const [parsedDocument, setParsedDocument] = useState(null);
   const [revisions, setRevisions] = useState([]);
   const [wordCount, setWordCount] = useState(0);
   const [analyzing, setAnalyzing] = useState(false);
-  const [parsedDocument, setParsedDocument] = useState(null);
 
   useEffect(() => {
     loadDocument();
@@ -23,77 +22,96 @@ export default function App() {
   async function loadDocument() {
     const [tab] = await chrome.tabs.query({
       active: true,
-
       currentWindow: true,
     });
 
-    chrome.tabs.sendMessage(
-      tab.id,
+    chrome.tabs.sendMessage(tab.id, { type: "GET_DOC_INFO" }, (response) => {
+      setDoc(response);
+      setLoading(false);
+    });
+  }
 
-      {
-        type: "GET_DOC_INFO",
-      },
+  async function inspectPage() {
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
 
-      (response) => {
-        setDoc(response);
+    if (!tab?.id) {
+      return;
+    }
 
-        setLoading(false);
-      },
-    );
+    return new Promise((resolve) => {
+      chrome.tabs.sendMessage(tab.id, { type: "GET_PAGE_DATA" }, (data) => {
+        if (chrome.runtime.lastError) {
+          console.error(chrome.runtime.lastError.message);
+          resolve(null);
+          return;
+        }
+
+        console.log("PAGE DATA", data);
+        resolve(data);
+      });
+    });
+  }
+
+  async function getModel() {
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+
+    if (!tab?.id) {
+      return;
+    }
+
+    return new Promise((resolve) => {
+      chrome.tabs.sendMessage(tab.id, { type: "GET_MODEL_CHUNK" }, (data) => {
+        console.log("MODEL", data);
+
+        if (data?.found) {
+          setParsedDocument(parseModelChunk(data.model));
+        }
+
+        resolve(data);
+      });
+    });
   }
 
   async function analyzeDocument() {
     try {
       setAnalyzing(true);
 
-      const token = await loginGoogle();
+      await inspectPage();
+      await getModel();
 
+      const token = await loginGoogle();
       setGoogleToken(token);
 
       const document = await getGoogleDocument(doc.id, token);
+      console.log("Google Docs response:", document);
 
       setDocumentData(document);
 
       const text = extractText(document);
+      console.log("Document text:", text);
 
       setWordCount(text.trim().split(/\s+/).filter(Boolean).length);
 
-      const rev = await getRevisions(doc.id, token);
+      const driveRevisions = await getRevisions(doc.id, token);
+      console.log("Drive revisions:", driveRevisions);
 
-      setRevisions(rev);
+      setRevisions(driveRevisions);
+
+      const docsRevisions = await getGoogleDocsRevisions(doc.id, 1, 171, token);
+
+      console.log("Docs revisions/load:", docsRevisions);
     } catch (error) {
       console.error(error);
-
       alert(error.message);
     } finally {
       setAnalyzing(false);
     }
-  }
-
-  async function getModel() {
-    const [tab] = await chrome.tabs.query({
-      active: true,
-
-      currentWindow: true,
-    });
-
-    chrome.tabs.sendMessage(
-      tab.id,
-
-      {
-        type: "GET_MODEL_CHUNK",
-      },
-
-      (data) => {
-        console.log("MODEL", data);
-
-        if (data.found) {
-          const parsed = parseModelChunk(data.model);
-
-          setParsedDocument(parsed);
-        }
-      },
-    );
   }
 
   if (loading) {
@@ -104,22 +122,15 @@ export default function App() {
     <div
       style={{
         padding: 20,
-
         width: 380,
-
         fontFamily: "Arial",
       }}
     >
       <h2>Writing Authenticity</h2>
-
       <hr />
-
       <h3>Document</h3>
-
       <p>{doc?.title}</p>
-
       <code>{doc?.id}</code>
-
       <br />
       <br />
 
@@ -127,28 +138,16 @@ export default function App() {
         {analyzing ? "Analyzing..." : "Analyze Document"}
       </button>
 
-      <button
-        onClick={getModel}
-        style={{
-          marginLeft: 10,
-        }}
-      >
-        Get Model
-      </button>
-
       {googleToken && <p>✅ Google connected</p>}
 
       {documentData && (
         <>
           <hr />
-
           <h3>Statistics</h3>
-
           <p>
             Words:
             <b> {wordCount}</b>
           </p>
-
           <p>
             Revisions:
             <b> {revisions.length}</b>
@@ -159,27 +158,22 @@ export default function App() {
       {parsedDocument && (
         <>
           <hr />
-
           <h3>Reconstructed Document</h3>
-
           <p>
             Characters:
             <b> {parsedDocument.characters}</b>
           </p>
-
           <p>
             Words:
             <b> {parsedDocument.words}</b>
           </p>
-
           <textarea
+            readOnly
+            value={parsedDocument.text}
             style={{
               width: "100%",
-
               height: 150,
             }}
-            value={parsedDocument.text}
-            readOnly
           />
         </>
       )}

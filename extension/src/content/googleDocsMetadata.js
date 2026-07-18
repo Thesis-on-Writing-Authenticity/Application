@@ -39,7 +39,9 @@ function getModelChunk() {
 
     return {
       found: true,
-
+      size: jsonText.length,
+      chunkCount: parsed?.chunk?.length || 0,
+      sample: parsed?.chunk?.slice(0, 10),
       model: parsed,
     };
   } catch (error) {
@@ -47,26 +49,61 @@ function getModelChunk() {
 
     return {
       found: false,
-
       error: error.message,
     };
   }
 }
 
+function inspectGoogleDocsPage() {
+  const html = document.documentElement.innerHTML;
+
+  const keywords = [
+    "AF_initData",
+    "tileInfo",
+    "changelog",
+    "revision",
+    "revisions",
+    "DOCS_modelChunk",
+    "serverData",
+    "bootstrap",
+    "collab",
+  ];
+
+  const found = {};
+
+  for (const keyword of keywords) {
+    found[keyword] = html.includes(keyword);
+  }
+
+  const scripts = Array.from(document.scripts)
+    .map((script) => script.textContent)
+    .filter((text) => text.length > 100)
+    .slice(0, 5);
+
+  return {
+    pageLength: html.length,
+    found,
+    scripts,
+  };
+}
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log("Message:", request);
 
-  if (request.type === "GET_DOC_INFO") {
-    sendResponse(getDocumentInfo());
+  switch (request.type) {
+    case "GET_DOC_INFO":
+      sendResponse(getDocumentInfo());
+      return true;
 
-    return true;
+    case "GET_MODEL_CHUNK":
+      sendResponse(getModelChunk());
+      return true;
+
+    case "GET_PAGE_DATA":
+      sendResponse(inspectGoogleDocsPage());
+      return true;
+
+    default:
+      return false;
   }
-
-  if (request.type === "GET_MODEL_CHUNK") {
-    sendResponse(getModelChunk());
-
-    return true;
-  }
-
-  return true;
 });
