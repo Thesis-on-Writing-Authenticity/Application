@@ -23,13 +23,5 @@ export default defineConfig(({ mode }) => {
         port: 5173,
       },
     },
-
-    build: {
-      rollupOptions: {
-        input: {
-          sidepanel: "src/sidepanel/index.html",
-        },
-      },
-    },
   };
 });
