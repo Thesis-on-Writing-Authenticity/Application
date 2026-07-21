@@ -4,6 +4,7 @@ import { getGoogleDocument, getGoogleDocsRevisions } from "../api/googleDocs";
 import { getRevisions } from "../api/googleDrive";
 import { extractText } from "../parser/documentParser";
 import { parseModelChunk } from "../parser/chunkParser";
+import { parseChangeLog } from "../parser/changelogParser";
 
 export default function App() {
   const [loading, setLoading] = useState(true);
@@ -62,18 +63,26 @@ export default function App() {
     });
 
     if (!tab?.id) {
-      return;
+      return null;
     }
 
     return new Promise((resolve) => {
       chrome.tabs.sendMessage(tab.id, { type: "GET_MODEL_CHUNK" }, (data) => {
         console.log("MODEL", data);
 
-        if (data?.found) {
-          setParsedDocument(parseModelChunk(data.model));
+        if (!data?.found) {
+          resolve(null);
+          return;
         }
 
-        resolve(data);
+        const parsed = parseModelChunk(data.model);
+
+        setParsedDocument(parsed);
+
+        resolve({
+          parsed,
+          model: data.model,
+        });
       });
     });
   }
@@ -83,7 +92,13 @@ export default function App() {
       setAnalyzing(true);
 
       await inspectPage();
-      await getModel();
+
+      const modelData = await getModel();
+
+      console.log("Raw model:", modelData.model);
+
+      const latestRevision = modelData?.model?.revision
+      console.log("Latest revision:", latestRevision);
 
       const token = await loginGoogle();
       setGoogleToken(token);
@@ -103,9 +118,20 @@ export default function App() {
 
       setRevisions(driveRevisions);
 
-      const docsRevisions = await getGoogleDocsRevisions(doc.id, 1, 171, token);
+      const docsRevisions = await getGoogleDocsRevisions(doc.id, 1, latestRevision, token);
 
       console.log("Docs revisions/load:", docsRevisions);
+
+      const cleaned = docsRevisions.replace(")]}'", "").trim();
+
+      const revisionData = JSON.parse(cleaned);
+
+      console.log(revisionData);
+
+      const operations = parseChangeLog(revisionData);
+
+      console.table(operations);
+
     } catch (error) {
       console.error(error);
       alert(error.message);
