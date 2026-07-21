@@ -1,5 +1,3 @@
-console.log("Google Docs analyzer loaded");
-
 function getDocumentId() {
   const match = window.location.pathname.match(/\/document\/d\/([^/]+)/);
 
@@ -39,7 +37,9 @@ function getModelChunk() {
 
     return {
       found: true,
-
+      size: jsonText.length,
+      chunkCount: parsed?.chunk?.length || 0,
+      sample: parsed?.chunk?.slice(0, 10),
       model: parsed,
     };
   } catch (error) {
@@ -47,26 +47,22 @@ function getModelChunk() {
 
     return {
       found: false,
-
       error: error.message,
     };
   }
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log("Message:", request);
+  switch (request.type) {
+    case "GET_DOC_INFO":
+      sendResponse(getDocumentInfo());
+      return true;
 
-  if (request.type === "GET_DOC_INFO") {
-    sendResponse(getDocumentInfo());
+    case "GET_MODEL_CHUNK":
+      sendResponse(getModelChunk());
+      return true;
 
-    return true;
+    default:
+      return false;
   }
-
-  if (request.type === "GET_MODEL_CHUNK") {
-    sendResponse(getModelChunk());
-
-    return true;
-  }
-
-  return true;
 });

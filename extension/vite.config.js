@@ -14,11 +14,13 @@ export default defineConfig(({ mode }) => {
       }),
     ],
 
-    build: {
-      rollupOptions: {
-        input: {
-          sidepanel: "src/sidepanel/index.html",
-        },
+    server: {
+      host: "localhost",
+      port: 5173,
+      strictPort: true,
+      hmr: {
+        host: "localhost",
+        port: 5173,
       },
     },
   };
