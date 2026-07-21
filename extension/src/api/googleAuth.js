@@ -10,6 +10,7 @@ export async function loginGoogle() {
           reject(chrome.runtime.lastError);
           return;
         }
+        console.log("Google token:", token);
         resolve(token);
       },
     );
