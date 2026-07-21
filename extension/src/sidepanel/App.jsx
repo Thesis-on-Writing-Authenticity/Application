@@ -62,41 +62,79 @@ export default function App() {
   }
 
   async function analyzeDocument() {
-    try {
-      setAnalyzing(true);
+  try {
+    setAnalyzing(true);
+    console.log("=== Starting document analysis ===");
+    console.log("Document ID:", doc.id);
 
-      const modelData = await getModel();
-      const latestRevision = modelData?.model?.revision;
+    console.log("Fetching model...");
+    const modelData = await getModel();
+    console.log("Model data:", modelData);
 
-      const token = await loginGoogle();
-      setGoogleToken(token);
+    const latestRevision = modelData?.model?.revision;
+    console.log("Latest revision:", latestRevision);
 
-      const tilesData = await getGoogleDocsTiles(doc.id, token);
+    console.log("Logging into Google...");
+    const token = await loginGoogle();
+    console.log("Google token acquired:", token ? "YES" : "NO");
 
-      const document = await getGoogleDocument(doc.id, token);
-      setDocumentData(document);
+    setGoogleToken(token);
 
-      const text = extractText(document);
-      setWordCount(text.trim().split(/\s+/).filter(Boolean).length);
+    console.log("Fetching Google Docs tiles...");
+    const tilesData = await getGoogleDocsTiles(doc.id, token);
+    console.log("Tiles data:", tilesData);
 
-      const driveRevisions = await getRevisions(doc.id, token);
-      setRevisions(driveRevisions);
+    console.log("Fetching Google Document...");
+    const document = await getGoogleDocument(doc.id, token);
+    console.log("Document:", document);
 
-      const docsRevisions = await getGoogleDocsRevisions(doc.id, 1, latestRevision, token);
-      const cleaned = docsRevisions.replace(")]}'", "").trim();
-      const revisionData = JSON.parse(cleaned);
+    setDocumentData(document);
 
-      const operations = parseChangeLog(revisionData);
-      const frames = buildFrames(operations, tilesData.userMap);
+    const text = extractText(document);
+    console.log("Extracted text:", text);
 
-      setFrames(frames);
-    } catch (error) {
-      console.error(error);
-      alert(error.message);
-    } finally {
-      setAnalyzing(false);
-    }
+    const words = text.trim().split(/\s+/).filter(Boolean).length;
+    console.log("Word count:", words);
+
+    setWordCount(words);
+
+    console.log("Fetching Drive revisions...");
+    const driveRevisions = await getRevisions(doc.id, token);
+    console.log("Drive revisions:", driveRevisions);
+
+    setRevisions(driveRevisions);
+
+    console.log("Fetching Docs revision changelog...");
+    const docsRevisions = await getGoogleDocsRevisions(doc.id, 1, latestRevision, token);
+    console.log("Raw Docs revisions:", docsRevisions);
+
+    const cleaned = docsRevisions.replace(")]}'", "").trim();
+    console.log("Cleaned JSON:", cleaned);
+
+    const revisionData = JSON.parse(cleaned);
+    console.log("Parsed revision data:", revisionData);
+
+    console.log("Parsing change log...");
+    const operations = parseChangeLog(revisionData);
+    console.log("Operations:", operations);
+    console.log("Operation count:", operations.length);
+
+    console.log("Building playback frames...");
+    const frames = buildFrames(operations, tilesData.userMap);
+    console.log("Frames:", frames);
+    console.log("Frame count:", frames.length);
+
+    setFrames(frames);
+
+    console.log("=== Analysis complete ===");
+  } catch (error) {
+    console.error("Analysis failed:", error);
+    console.error("Stack:", error.stack);
+    alert(error.message);
+  } finally {
+    setAnalyzing(false);
   }
+}
 
   if (loading) {
     return <div>Loading...</div>;
