@@ -1,4 +1,4 @@
-import { parseOperation } from "./operationHandler";
+import { parseOperation } from "../handlers/operationHandler";
 
 export function parseChangeLog(data) {
   const operations = [];

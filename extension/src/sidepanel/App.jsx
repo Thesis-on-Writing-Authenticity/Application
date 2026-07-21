@@ -1,20 +1,27 @@
 import { useEffect, useState } from "react";
 import { loginGoogle } from "../api/googleAuth";
-import { getGoogleDocument, getGoogleDocsRevisions } from "../api/googleDocs";
+import {
+  getGoogleDocument,
+  getGoogleDocsRevisions,
+  getGoogleDocsTiles,
+} from "../api/googleDocs";
 import { getRevisions } from "../api/googleDrive";
-import { extractText } from "../parser/documentParser";
-import { parseModelChunk } from "../parser/chunkParser";
+import { extractText } from "../parser/googleDocsTextExtractor";
 import { parseChangeLog } from "../parser/changelogParser";
+import { buildFrames } from "../replay/buildFrames";
+import PlaybackViewer from "../components/ReplayPlayer";
+import { buildUserStats } from "../replay/statistics";
+import StatsBar from "../components/StatsBar";
 
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [doc, setDoc] = useState(null);
   const [googleToken, setGoogleToken] = useState(null);
   const [documentData, setDocumentData] = useState(null);
-  const [parsedDocument, setParsedDocument] = useState(null);
   const [revisions, setRevisions] = useState([]);
   const [wordCount, setWordCount] = useState(0);
   const [analyzing, setAnalyzing] = useState(false);
+  const [frames, setFrames] = useState([]);
 
   useEffect(() => {
     loadDocument();
@@ -32,30 +39,6 @@ export default function App() {
     });
   }
 
-  async function inspectPage() {
-    const [tab] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
-
-    if (!tab?.id) {
-      return;
-    }
-
-    return new Promise((resolve) => {
-      chrome.tabs.sendMessage(tab.id, { type: "GET_PAGE_DATA" }, (data) => {
-        if (chrome.runtime.lastError) {
-          console.error(chrome.runtime.lastError.message);
-          resolve(null);
-          return;
-        }
-
-        console.log("PAGE DATA", data);
-        resolve(data);
-      });
-    });
-  }
-
   async function getModel() {
     const [tab] = await chrome.tabs.query({
       active: true,
@@ -68,21 +51,12 @@ export default function App() {
 
     return new Promise((resolve) => {
       chrome.tabs.sendMessage(tab.id, { type: "GET_MODEL_CHUNK" }, (data) => {
-        console.log("MODEL", data);
-
         if (!data?.found) {
           resolve(null);
           return;
         }
 
-        const parsed = parseModelChunk(data.model);
-
-        setParsedDocument(parsed);
-
-        resolve({
-          parsed,
-          model: data.model,
-        });
+        resolve({ model: data.model });
       });
     });
   }
@@ -91,47 +65,31 @@ export default function App() {
     try {
       setAnalyzing(true);
 
-      await inspectPage();
-
       const modelData = await getModel();
-
-      console.log("Raw model:", modelData.model);
-
-      const latestRevision = modelData?.model?.revision
-      console.log("Latest revision:", latestRevision);
+      const latestRevision = modelData?.model?.revision;
 
       const token = await loginGoogle();
       setGoogleToken(token);
 
-      const document = await getGoogleDocument(doc.id, token);
-      console.log("Google Docs response:", document);
+      const tilesData = await getGoogleDocsTiles(doc.id, token);
 
+      const document = await getGoogleDocument(doc.id, token);
       setDocumentData(document);
 
       const text = extractText(document);
-      console.log("Document text:", text);
-
       setWordCount(text.trim().split(/\s+/).filter(Boolean).length);
 
       const driveRevisions = await getRevisions(doc.id, token);
-      console.log("Drive revisions:", driveRevisions);
-
       setRevisions(driveRevisions);
 
       const docsRevisions = await getGoogleDocsRevisions(doc.id, 1, latestRevision, token);
-
-      console.log("Docs revisions/load:", docsRevisions);
-
       const cleaned = docsRevisions.replace(")]}'", "").trim();
-
       const revisionData = JSON.parse(cleaned);
 
-      console.log(revisionData);
-
       const operations = parseChangeLog(revisionData);
+      const frames = buildFrames(operations, tilesData.userMap);
 
-      console.table(operations);
-
+      setFrames(frames);
     } catch (error) {
       console.error(error);
       alert(error.message);
@@ -181,28 +139,8 @@ export default function App() {
         </>
       )}
 
-      {parsedDocument && (
-        <>
-          <hr />
-          <h3>Reconstructed Document</h3>
-          <p>
-            Characters:
-            <b> {parsedDocument.characters}</b>
-          </p>
-          <p>
-            Words:
-            <b> {parsedDocument.words}</b>
-          </p>
-          <textarea
-            readOnly
-            value={parsedDocument.text}
-            style={{
-              width: "100%",
-              height: 150,
-            }}
-          />
-        </>
-      )}
+      <PlaybackViewer frames={frames} />
+      <StatsBar stats={buildUserStats(frames)} />
     </div>
   );
 }
