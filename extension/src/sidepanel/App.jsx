@@ -12,6 +12,7 @@ import { buildFrames } from "../replay/buildFrames";
 import PlaybackViewer from "../components/ReplayPlayer";
 import { buildUserStats } from "../replay/statistics";
 import StatsBar from "../components/StatsBar";
+import SidePanelUI from "./SidePanelUI";
 
 export default function App() {
   const [loading, setLoading] = useState(true);
@@ -47,6 +48,28 @@ export default function App() {
       },
     );
   }
+
+  async function getModel() {
+  const [tab] = await chrome.tabs.query({
+    active: true,
+    currentWindow: true,
+  });
+
+  return new Promise((resolve, reject) => {
+    chrome.tabs.sendMessage(
+      tab.id,
+      { type: "GET_MODEL_CHUNK" },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+          return;
+        }
+
+        resolve(response);
+      }
+    );
+  });
+}
 
   async function analyzeDocument() {
   try {
@@ -123,49 +146,17 @@ export default function App() {
   }
 }
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  return (
-    <div
-      style={{
-        padding: 20,
-        width: 380,
-        fontFamily: "Arial",
-      }}
-    >
-      <h2>Writing Authenticity</h2>
-      <hr />
-      <h3>Document</h3>
-      <p>{doc?.title}</p>
-      <code>{doc?.id}</code>
-      <br />
-      <br />
-
-      <button onClick={analyzeDocument} disabled={analyzing}>
-        {analyzing ? "Analyzing..." : "Analyze Document"}
-      </button>
-
-      {googleToken && <p>✅ Google connected</p>}
-
-      {documentData && (
-        <>
-          <hr />
-          <h3>Statistics</h3>
-          <p>
-            Words:
-            <b> {wordCount}</b>
-          </p>
-          <p>
-            Revisions:
-            <b> {revisions.length}</b>
-          </p>
-        </>
-      )}
-
-      <PlaybackViewer frames={frames} />
-      <StatsBar stats={buildUserStats(frames)} />
-    </div>
-  );
+return (
+  <SidePanelUI
+    loading={loading}
+    doc={doc}
+    googleToken={googleToken}
+    documentData={documentData}
+    wordCount={wordCount}
+    revisions={revisions}
+    analyzing={analyzing}
+    analyzeDocument={analyzeDocument}
+    frames={frames}
+  />
+);
 }
