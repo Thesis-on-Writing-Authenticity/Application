@@ -10,6 +10,7 @@ export default function PlaybackDocument({ frame, previousFrame }) {
       <div
         style={{
           whiteSpace: "pre-wrap",
+          backgroundColor: "#fff",
           border: "1px solid #ddd",
           padding: 10,
           minHeight: 180,
@@ -31,6 +32,7 @@ export default function PlaybackDocument({ frame, previousFrame }) {
       <div
         style={{
           whiteSpace: "pre-wrap",
+          backgroundColor: "#fff",
           border: "1px solid #ddd",
           padding: 10,
           minHeight: 180,
@@ -65,6 +67,7 @@ export default function PlaybackDocument({ frame, previousFrame }) {
       <div
         style={{
           whiteSpace: "pre-wrap",
+          backgroundColor: "#fff",
           border: "1px solid #ddd",
           padding: 10,
           minHeight: 180,
@@ -95,6 +98,7 @@ export default function PlaybackDocument({ frame, previousFrame }) {
     <div
       style={{
         whiteSpace: "pre-wrap",
+        backgroundColor: "#fff",
         border: "1px solid #ddd",
         padding: 10,
         minHeight: 180,
