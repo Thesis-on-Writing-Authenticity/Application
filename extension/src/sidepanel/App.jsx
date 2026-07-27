@@ -13,6 +13,7 @@ import PlaybackViewer from "../components/ReplayPlayer";
 import { buildUserStats } from "../replay/statistics";
 import StatsBar from "../components/StatsBar";
 import SidePanelUI from "./SidePanelUI";
+import { saveSession } from "../api/writingEvents";
 
 export default function App() {
   const [loading, setLoading] = useState(true);
@@ -23,6 +24,10 @@ export default function App() {
   const [wordCount, setWordCount] = useState(0);
   const [analyzing, setAnalyzing] = useState(false);
   const [frames, setFrames] = useState([]);
+  const [operations, setOperations] = useState([]);
+  const [charCount, setCharCount] = useState(0);
+  const [backendStatus, setBackendStatus] = useState(null);
+  const [metrics, setMetrics] = useState(null);
 
   useEffect(() => {
     loadDocument();
@@ -107,6 +112,7 @@ export default function App() {
     console.log("Word count:", words);
 
     setWordCount(words);
+    setCharCount(text.length);
 
     console.log("Fetching Drive revisions...");
     const driveRevisions = await getRevisions(doc.id, token);
@@ -128,6 +134,19 @@ export default function App() {
     const operations = parseChangeLog(revisionData);
     console.log("Operations:", operations);
     console.log("Operation count:", operations.length);
+    setOperations(operations);
+
+    // Persist the writing session (metadata only) to the backend. Kept
+    // non-fatal so a backend problem never breaks analysis or replay below.
+    try {
+      const saved = await saveSession(doc, operations);
+      console.log("Saved session to backend:", saved?.id);
+      setBackendStatus({ ok: true, id: saved?.id });
+      setMetrics(saved?.metrics ?? null);
+    } catch (backendError) {
+      console.warn("Backend save failed (analysis still OK):", backendError.message);
+      setBackendStatus({ ok: false, message: backendError.message });
+    }
 
     console.log("Building playback frames...");
     const frames = buildFrames(operations, tilesData.userMap);
@@ -157,6 +176,10 @@ return (
     analyzing={analyzing}
     analyzeDocument={analyzeDocument}
     frames={frames}
+    operations={operations}
+    charCount={charCount}
+    backendStatus={backendStatus}
+    metrics={metrics}
   />
 );
 }
