@@ -25,6 +25,7 @@ export default (clientId) =>
     host_permissions: [
       "https://docs.google.com/*",
       "https://www.googleapis.com/*",
+      "http://localhost:3000/*",
     ],
 
     oauth2: {
