@@ -1,3 +1,5 @@
+import "./content.css";
+
 function getDocumentId() {
   const match = window.location.pathname.match(/\/document\/d\/([^/]+)/);
 
@@ -66,3 +68,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return false;
   }
 });
+
+function injectAuthenticityButton() {
+  const target = document.querySelector('.docs-titlebar-buttons');
+  if (!target || document.getElementById('writing-authenticity-btn')) return;
+
+  const btn = document.createElement('div');
+  btn.id = 'writing-authenticity-btn';
+  btn.className = 'writing-authenticity-btn';
+  btn.textContent = 'Authenticity';
+
+  btn.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: 'OPEN_SIDEPANEL' });
+  });
+
+  target.prepend(btn);
+}
+
+const toolbarObserver = new MutationObserver(injectAuthenticityButton);
+toolbarObserver.observe(document.body, { childList: true, subtree: true });
+
+injectAuthenticityButton();
