@@ -69,7 +69,13 @@ export default function PlaybackViewer({ frames }) {
           ◀
         </button>
 
-        <button onClick={() => setPlaying((p) => !p)}>
+        <button onClick={() => {
+            if (currentFrame >= frames.length - 1) {
+              setCurrentFrame(0);
+            }
+            setPlaying((p) => !p);
+          }}
+        >
           {playing ? "Pause" : "Play"}
         </button>
 
