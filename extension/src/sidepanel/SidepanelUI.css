@@ -23,6 +23,11 @@
   background-color: #1b5e20;
 }
 
+.analyzeButton:disabled {
+  opacity: .6;
+  cursor: default;
+}
+
 .resultsContainer {
   margin-top: 20px;
   padding: 16px;
