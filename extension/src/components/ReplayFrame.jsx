@@ -1,3 +1,5 @@
+import "./ReplayFrame.css";
+
 export default function PlaybackDocument({ frame, previousFrame }) {
   if (!frame) {
     return null;
@@ -7,18 +9,7 @@ export default function PlaybackDocument({ frame, previousFrame }) {
 
   if (!operation) {
     return (
-      <div
-        style={{
-          whiteSpace: "pre-wrap",
-          backgroundColor: "#fff",
-          border: "1px solid #ddd",
-          padding: 10,
-          minHeight: 180,
-          borderRadius: 6,
-          fontFamily: "Arial",
-          fontSize: 14,
-        }}
-      >
+      <div className="playbackDocument">
         {frame.text}
       </div>
     );
@@ -29,26 +20,10 @@ export default function PlaybackDocument({ frame, previousFrame }) {
     const end = start + operation.text.length;
 
     return (
-      <div
-        style={{
-          whiteSpace: "pre-wrap",
-          backgroundColor: "#fff",
-          border: "1px solid #ddd",
-          padding: 10,
-          minHeight: 180,
-          borderRadius: 6,
-          fontFamily: "Arial",
-          fontSize: 14,
-        }}
-      >
+      <div className="playbackDocument">
         {frame.text.slice(0, start)}
 
-        <span
-          style={{
-            backgroundColor: "#9be79b",
-            borderRadius: 3,
-          }}
-        >
+        <span className="insertHighlight">
           {frame.text.slice(start, end)}
         </span>
 
@@ -64,28 +39,10 @@ export default function PlaybackDocument({ frame, previousFrame }) {
     );
 
     return (
-      <div
-        style={{
-          whiteSpace: "pre-wrap",
-          backgroundColor: "#fff",
-          border: "1px solid #ddd",
-          padding: 10,
-          minHeight: 180,
-          borderRadius: 6,
-          fontFamily: "Arial",
-          fontSize: 14,
-        }}
-      >
+      <div className="playbackDocument">
         {frame.text.slice(0, operation.start)}
 
-        <span
-          style={{
-            color: "#d32f2f",
-            textDecoration: "line-through",
-            backgroundColor: "#ffd6d6",
-            borderRadius: 3,
-          }}
-        >
+        <span className="deleteHighlight">
           {deleted}
         </span>
 
@@ -95,18 +52,7 @@ export default function PlaybackDocument({ frame, previousFrame }) {
   }
 
   return (
-    <div
-      style={{
-        whiteSpace: "pre-wrap",
-        backgroundColor: "#fff",
-        border: "1px solid #ddd",
-        padding: 10,
-        minHeight: 180,
-        borderRadius: 6,
-        fontFamily: "Arial",
-        fontSize: 14,
-      }}
-    >
+    <div className="playbackDocument">
       {frame.text}
     </div>
   );
