@@ -14,14 +14,22 @@ export function computeMetrics(session, events) {
   let deletedCharCount = 0;
   let editEventCount = 0;
   let longPauseCount = 0;
+  let insertCount = 0;
+  let maxInsertLength = 0;
+  let pasteCount = 0;
 
   for (const event of events) {
     switch (event.type) {
       case "INSERT":
         typedCharCount += event.length;
+        insertCount += 1;
+        if (event.length > maxInsertLength) {
+          maxInsertLength = event.length;
+        }
         break;
       case "PASTE":
         pastedCharCount += event.length;
+        pasteCount += 1;
         break;
       case "DELETE":
         editEventCount += 1;
@@ -46,6 +54,10 @@ export function computeMetrics(session, events) {
     deletedCharCount,
     editEventCount,
     longPauseCount,
+    insertCount,
+    maxInsertLength,
+    meanInsertLength: insertCount > 0 ? typedCharCount / insertCount : 0,
+    pasteCount,
     startedAt: session.started_at,
     endedAt: session.ended_at,
   };

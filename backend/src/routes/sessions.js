@@ -101,6 +101,56 @@ sessionsRouter.get("/", (_req, res) => {
   res.json({ sessions });
 });
 
+// Column order for the CSV export.
+const EXPORT_COLUMNS = [
+  "sessionId", "documentId", "scenario", "sessionStartedAt", "sessionEndedAt",
+  "type", "at", "length", "position", "start", "end", "author", "docSession", "index",
+];
+
+function toCsv(rows) {
+  const escape = (value) => {
+    const s = value == null ? "" : String(value);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const header = EXPORT_COLUMNS.join(",");
+  const lines = rows.map((row) => EXPORT_COLUMNS.map((c) => escape(row[c])).join(","));
+  return [header, ...lines].join("\n");
+}
+
+// GET /api/sessions/export — one flattened row per event, for the offline
+// (Python) analysis. JSON by default, or CSV with ?format=csv. Declared before
+// "/:id" so "export" is not matched as a session id.
+sessionsRouter.get("/export", (req, res) => {
+  const rows = [];
+  for (const session of selectAllSessions.all()) {
+    for (const event of selectEventsForSession.all(session.id)) {
+      const meta = event.meta ? JSON.parse(event.meta) : {};
+      rows.push({
+        sessionId: session.id,
+        documentId: session.document_id,
+        scenario: session.scenario,
+        sessionStartedAt: session.started_at,
+        sessionEndedAt: session.ended_at,
+        type: event.type,
+        at: event.at,
+        length: event.length,
+        position: meta.position,
+        start: meta.start,
+        end: meta.end,
+        author: meta.author,
+        docSession: meta.session,
+        index: meta.index,
+      });
+    }
+  }
+
+  if (req.query.format === "csv") {
+    res.type("text/csv").send(toCsv(rows));
+    return;
+  }
+  res.json({ rows });
+});
+
 // GET /api/sessions/:id — one session with its events and metrics.
 sessionsRouter.get("/:id", (req, res) => {
   const session = selectSession.get(req.params.id);
