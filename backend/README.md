@@ -46,6 +46,7 @@ database path. Defaults: `PORT=3000`, `DB_PATH=data/app.db`.
 | POST   | `/api/sessions/:id/events` | Append a batch of events                   |
 | PATCH  | `/api/sessions/:id`        | Mark the session ended (`endedAt`)         |
 | GET    | `/api/sessions`            | List all sessions, each with metrics       |
+| GET    | `/api/sessions/export`     | One row per event (JSON, or CSV via `?format=csv`) |
 | GET    | `/api/sessions/:id`        | One session with its events and metrics    |
 
 ### Create a session
@@ -86,14 +87,31 @@ POST /api/sessions/:id/events
 ```jsonc
 {
   "totalWritingTimeMs": 300000,
-  "typedCharCount": 120,
-  "pastedCharCount": 300,
+  "typedCharCount": 120,       // chars from INSERT events (typed)
+  "pastedCharCount": 300,      // chars from PASTE events (large single inserts)
   "pasteToTypeRatio": 2.5,
-  "editEventCount": 1,
-  "longPauseCount": 1,     // pauses longer than 2000 ms
+  "deletedCharCount": 5,       // chars from DELETE events
+  "editEventCount": 1,         // number of delete actions
+  "longPauseCount": 1,         // pauses longer than 2000 ms
+  "insertCount": 8,            // number of INSERT events
+  "maxInsertLength": 30,       // largest single insert (paste signal)
+  "meanInsertLength": 15,      // average insert size
+  "pasteCount": 1,             // number of PASTE events
   "startedAt": "...",
   "endedAt": "..."
 }
+```
+
+### Events export
+
+`GET /api/sessions/export` returns one flattened row per event across all
+sessions — the handoff to the offline analysis. JSON by default, or CSV with
+`?format=csv`. Columns: `sessionId, documentId, scenario, sessionStartedAt,
+sessionEndedAt, type, at, length, position, start, end, author, docSession,
+index`.
+
+```bash
+curl "localhost:3000/api/sessions/export?format=csv" > sessions.csv
 ```
 
 ## How the extension sends events
@@ -102,18 +120,20 @@ The extension sends a session automatically at the end of `analyzeDocument`
 (`src/sidepanel/App.jsx`) via `saveSession()` in
 `extension/src/api/writingEvents.js`. That helper:
 
-1. maps the changelog `operations` to backend events — `insert → INSERT`,
-   `delete → DELETE` — using each operation's character `length` and
-   `timestamp`, keeping `author` / `revision` / `position` in `meta` (never the
-   text);
-2. calls `createSession` → `sendEvents` → `endSession`.
+1. maps the changelog `operations` to backend events — `delete → DELETE`, and
+   `insert → INSERT` unless the insert is large (≥ 15 chars in one operation),
+   in which case it is treated as `PASTE` (real typing arrives in small bursts,
+   so a large single insert is almost certainly a paste). Character `length`,
+   `timestamp`, and `author`/`revision`/`position` in `meta` are kept — never
+   the text;
+2. derives `PAUSE` events from idle gaps (> 2 s) between operations;
+3. calls `createSession` → `sendEvents` → `endSession`.
 
 The transport client (`createSession` / `sendEvents` / `endSession`) lives in
 `extension/src/api/backend.js` and is not edited per session.
 
-`PASTE` and `PAUSE` are accepted by the API but not produced yet — the current
-changelog only yields inserts and deletes. They can be added later (e.g. pauses
-derived from timestamp gaps) with no backend change.
+The paste threshold is a heuristic (`PASTE_MIN_INSERT_CHARS` in
+`writingEvents.js`) — tune it once real pasted samples are available.
 
 ## Inspecting the database
 
