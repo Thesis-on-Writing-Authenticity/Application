@@ -17,10 +17,17 @@ function toIso(timestamp) {
 
 // Map one pipeline operation to a backend event, or null if it isn't a writing
 // action the backend tracks (e.g. style changes are skipped for now).
+// An insert of at least this many characters in a single operation is treated
+// as a paste. Real typing arrives in small bursts (a few characters per op),
+// so a large single insert almost certainly came from a paste. Heuristic —
+// tune once real pasted samples are available.
+const PASTE_MIN_INSERT_CHARS = 15;
+
 function operationToEvent(op) {
   if (op.type === "insert") {
     return {
-      type: "INSERT",
+      // Large single inserts are classified as pastes (see threshold above).
+      type: op.length >= PASTE_MIN_INSERT_CHARS ? "PASTE" : "INSERT",
       at: toIso(op.timestamp),
       length: op.length,
       meta: {
