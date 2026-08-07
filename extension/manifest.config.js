@@ -62,7 +62,7 @@ export default (clientId) =>
     content_scripts: [
       {
         matches: ["https://docs.google.com/document/*"],
-        js: ["src/content/googleDocsMetadata.js"],
+        js: ["src/content/googleDocsContentScript.js"],
         run_at: "document_idle",
       },
     ],
