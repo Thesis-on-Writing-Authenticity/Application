@@ -7,27 +7,33 @@ export default function DocumentStats({
   return (
     <>
       <hr />
-      <h3>Statistics</h3>
+      <h3>Quick Statistics</h3>
 
-      <p>
-        Words:
-        <b> {wordCount}</b>
-      </p>
+      <table
+        style={{
+          width: "100%",
+          fontSize: 13,
+          borderCollapse: "collapse",
+        }}
+      >
+        <thead>
+          <tr>
+            <th>Words</th>
+            <th>Characters</th>
+            <th>Operations</th>
+            <th>Revisions</th>
+          </tr>
+        </thead>
 
-      <p>
-        Characters:
-        <b> {charCount}</b>
-      </p>
-
-      <p>
-        Operations:
-        <b> {operations?.length ?? 0}</b>
-      </p>
-
-      <p>
-        Revisions:
-        <b> {revisions.length}</b>
-      </p>
+        <tbody>
+          <tr>
+            <td style={{ textAlign: "center" }}>{wordCount}</td>
+            <td style={{ textAlign: "center" }}>{charCount}</td>
+            <td style={{ textAlign: "center" }}>{operations?.length ?? 0}</td>
+            <td style={{ textAlign: "center" }}>{revisions?.length ?? 0}</td>
+          </tr>
+        </tbody>
+      </table>
     </>
   );
 }

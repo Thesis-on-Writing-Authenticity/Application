@@ -1,48 +1,157 @@
+import "./Metrics.css";
+
 export default function Metrics({ metrics, backendStatus }) {
+  if (!metrics && !backendStatus) {
+    return null;
+  }
+
+  const maxCharacters = Math.max(
+    metrics?.typedCharCount ?? 0,
+    metrics?.deletedCharCount ?? 0,
+    metrics?.pastedCharCount ?? 0
+  );
+
+  const maxEditing = Math.max(
+    metrics?.editEventCount ?? 0,
+    metrics?.longPauseCount ?? 0
+  );
+
+  const getWidth = (value, max) => {
+    if (!value || !max) return "0%";
+    return `${(value / max) * 100}%`;
+  };
+
+  const totalCharacters =
+  metrics.typedCharCount + metrics.pastedCharCount;
+
+  const typedPercentage =
+    totalCharacters > 0
+      ? (metrics.typedCharCount / totalCharacters) * 100
+      : 0;
+
+  const pastedPercentage =
+    totalCharacters > 0
+      ? (metrics.pastedCharCount / totalCharacters) * 100
+      : 0;
+
   return (
     <>
+      <hr />
+      <h3>Behavioural Metrics</h3>
+
       {metrics && (
         <>
-          <h3>Behavioural Metrics</h3>
+          <h4>Character Activity</h4>
 
-          <p>Typed characters:
-            <b> {metrics.typedCharCount}</b>
-          </p>
+          <div className="metricRow">
+            <span>Typed</span>
+            <div className="metricBarContainer">
+              <div
+                className="metricBar"
+                style={{
+                  width: getWidth(metrics.typedCharCount, maxCharacters),
+                }}
+              />
+            </div>
+            <b>{metrics.typedCharCount}</b>
+          </div>
 
-          <p>Deleted characters:
-            <b> {metrics.deletedCharCount}</b>
-          </p>
+          <div className="metricRow">
+            <span>Pasted</span>
+            <div className="metricBarContainer">
+              <div
+                className="metricBar"
+                style={{
+                  width: getWidth(metrics.pastedCharCount, maxCharacters),
+                }}
+              />
+            </div>
+            <b>{metrics.pastedCharCount}</b>
+          </div>
 
-          <p>Pasted characters:
-            <b> {metrics.pastedCharCount}</b>
-          </p>
+          <div className="metricRow">
+            <span>Deleted</span>
+            <div className="metricBarContainer">
+              <div
+                className="metricBar"
+                style={{
+                  width: getWidth(metrics.deletedCharCount, maxCharacters),
+                }}
+              />
+            </div>
+            <b>{metrics.deletedCharCount}</b>
+          </div>
 
-          <p>Paste / Type ratio:
-            <b>
-              {" "}
-              {metrics.pasteToTypeRatio == null
-                ? "-"
-                : metrics.pasteToTypeRatio.toFixed(2)}
-            </b>
-          </p>
+          <h4>Editing Behaviour</h4>
 
-          <p>Delete events:
-            <b> {metrics.editEventCount}</b>
-          </p>
+          <div className="metricRow">
+            <span>Delete Events</span>
+            <div className="metricBarContainer">
+              <div
+                className="metricBar"
+                style={{
+                  width: getWidth(metrics.editEventCount, maxEditing),
+                }}
+              />
+            </div>
+            <b>{metrics.editEventCount}</b>
+          </div>
 
-          <p>Long pauses:
-            <b> {metrics.longPauseCount}</b>
-          </p>
+          <div className="metricRow">
+            <span>Long Pauses</span>
+            <div className="metricBarContainer">
+              <div
+                className="metricBar"
+                style={{
+                  width: getWidth(metrics.longPauseCount, maxEditing),
+                }}
+              />
+            </div>
+            <b>{metrics.longPauseCount}</b>
+          </div>
 
-          <p>First to last edit time:
-            <b> {(metrics.totalWritingTimeMs / 1000).toFixed(1)} s</b>
-          </p>
+          <div className="pasteTypeChart">
+            <div
+              className="donut"
+              style={{
+                background: `conic-gradient(
+                  #2e7d32 0% ${typedPercentage}%,
+                  #1976d2 ${typedPercentage}% 100%
+                )`,
+              }}
+            >
+              <div className="donutCenter">
+                {metrics.pasteToTypeRatio == null
+                  ? "-"
+                  : metrics.pasteToTypeRatio.toFixed(2)}
+              </div>
+            </div>
+
+            <div className="donutLegend">
+              <div>
+                <span className="legendDot typedDot"></span>
+                Typed: <b>{metrics.typedCharCount}</b>
+              </div>
+
+              <div>
+                <span className="legendDot pastedDot"></span>
+                Pasted: <b>{metrics.pastedCharCount}</b>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <span>First-to-last edit span </span>
+              <b>
+                {(metrics.totalWritingTimeMs / 3600000).toFixed(2)} h
+              </b>
+            </div>
+
         </>
       )}
 
       {backendStatus && (
-        <p>
-          Backend:
+        <p>Backend:
           <b>
             {" "}
             {backendStatus.ok
@@ -54,6 +163,8 @@ export default function Metrics({ metrics, backendStatus }) {
     </>
   );
 }
+
+
 
           {/* TALTEEN:
             Final-document data:
