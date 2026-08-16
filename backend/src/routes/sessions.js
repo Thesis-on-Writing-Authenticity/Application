@@ -103,7 +103,7 @@ sessionsRouter.get("/", (_req, res) => {
 
 // Column order for the CSV export.
 const EXPORT_COLUMNS = [
-  "sessionId", "documentId", "scenario", "sessionStartedAt", "sessionEndedAt",
+  "sessionId", "documentId", "documentTitle", "scenario", "sessionStartedAt", "sessionEndedAt",
   "type", "at", "length", "position", "start", "end", "author", "docSession", "index",
 ];
 
@@ -128,6 +128,7 @@ sessionsRouter.get("/export", (req, res) => {
       rows.push({
         sessionId: session.id,
         documentId: session.document_id,
+        documentTitle: session.document_title,
         scenario: session.scenario,
         sessionStartedAt: session.started_at,
         sessionEndedAt: session.ended_at,
