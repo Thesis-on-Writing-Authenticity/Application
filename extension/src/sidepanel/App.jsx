@@ -39,6 +39,11 @@ export default function App() {
       currentWindow: true,
     });
 
+    if (!tab?.id) {
+      setLoading(false);
+      return;
+    }
+
     chrome.tabs.sendMessage(
       tab.id,
 
@@ -47,7 +52,11 @@ export default function App() {
       },
 
       (response) => {
-        setDoc(response);
+        if (chrome.runtime.lastError || !response?.id) {
+          setDoc(null);
+        } else {
+          setDoc(response);
+        }
 
         setLoading(false);
       },
@@ -59,6 +68,10 @@ export default function App() {
     active: true,
     currentWindow: true,
   });
+
+  if (!tab?.id) {
+    return null;
+  }
 
   return new Promise((resolve, reject) => {
     chrome.tabs.sendMessage(
@@ -77,6 +90,11 @@ export default function App() {
 }
 
   async function analyzeDocument() {
+  if (!doc?.id) {
+    alert("Open a Google Docs document in the active tab, then reopen this panel.");
+    return;
+  }
+
   try {
     setAnalyzing(true);
     console.log("=== Starting document analysis ===");
