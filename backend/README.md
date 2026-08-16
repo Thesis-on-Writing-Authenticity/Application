@@ -57,7 +57,6 @@ POST /api/sessions
   "documentId": "google-doc-id",
   "documentTitle": "My Essay",
   "source": "google-docs",
-  "scenario": "human",        // optional: "human" | "ai-pasted" | "ai-retyped"
   "startedAt": "2026-07-20T10:00:00.000Z"  // optional; defaults to now
 }
 ```
@@ -106,7 +105,7 @@ POST /api/sessions/:id/events
 
 `GET /api/sessions/export` returns one flattened row per event across all
 sessions — the handoff to the offline analysis. JSON by default, or CSV with
-`?format=csv`. Columns: `sessionId, documentId, scenario, sessionStartedAt,
+`?format=csv`. Columns: `sessionId, documentId, documentTitle, sessionStartedAt,
 sessionEndedAt, type, at, length, position, start, end, author, docSession,
 index`.
 

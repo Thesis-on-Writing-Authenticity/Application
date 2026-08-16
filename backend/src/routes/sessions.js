@@ -10,8 +10,8 @@ const VALID_EVENT_TYPES = new Set(["INSERT", "DELETE", "PASTE", "PAUSE"]);
 
 // Prepared statements (compiled once, reused per request).
 const insertSession = db.prepare(`
-  INSERT INTO sessions (id, document_id, document_title, source, scenario, started_at, ended_at, created_at)
-  VALUES (?, ?, ?, ?, ?, ?, NULL, ?)
+  INSERT INTO sessions (id, document_id, document_title, source, started_at, ended_at, created_at)
+  VALUES (?, ?, ?, ?, ?, NULL, ?)
 `);
 const insertEvent = db.prepare(`
   INSERT INTO events (session_id, type, at, length, meta) VALUES (?, ?, ?, ?, ?)
@@ -33,7 +33,7 @@ class HttpError extends Error {
 
 // POST /api/sessions — create a session, return its id.
 sessionsRouter.post("/", (req, res) => {
-  const { documentId, documentTitle, source, scenario, startedAt } = req.body ?? {};
+  const { documentId, documentTitle, source, startedAt } = req.body ?? {};
 
   const id = randomUUID();
   const now = new Date().toISOString();
@@ -42,7 +42,6 @@ sessionsRouter.post("/", (req, res) => {
     documentId ?? null,
     documentTitle ?? null,
     source ?? null,
-    scenario ?? null,
     startedAt ?? now,
     now,
   );
@@ -103,7 +102,7 @@ sessionsRouter.get("/", (_req, res) => {
 
 // Column order for the CSV export.
 const EXPORT_COLUMNS = [
-  "sessionId", "documentId", "documentTitle", "scenario", "sessionStartedAt", "sessionEndedAt",
+  "sessionId", "documentId", "documentTitle", "sessionStartedAt", "sessionEndedAt",
   "type", "at", "length", "position", "start", "end", "author", "docSession", "index",
 ];
 
@@ -129,7 +128,6 @@ sessionsRouter.get("/export", (req, res) => {
         sessionId: session.id,
         documentId: session.document_id,
         documentTitle: session.document_title,
-        scenario: session.scenario,
         sessionStartedAt: session.started_at,
         sessionEndedAt: session.ended_at,
         type: event.type,

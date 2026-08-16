@@ -28,7 +28,6 @@ db.exec(`
     document_id    TEXT,
     document_title TEXT,
     source         TEXT,
-    scenario       TEXT,
     started_at     TEXT,
     ended_at       TEXT,
     created_at     TEXT NOT NULL
