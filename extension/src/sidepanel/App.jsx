@@ -12,6 +12,8 @@ import { buildFrames } from "../replay/buildFrames";
 import PlaybackViewer from "../components/ReplayPlayer";
 import { buildUserStats } from "../replay/statistics";
 import StatsBar from "../components/StatsBar";
+import SidePanelUI from "./SidePanelUI";
+import { saveSession } from "../api/writingEvents";
 
 export default function App() {
   const [loading, setLoading] = useState(true);
@@ -22,6 +24,10 @@ export default function App() {
   const [wordCount, setWordCount] = useState(0);
   const [analyzing, setAnalyzing] = useState(false);
   const [frames, setFrames] = useState([]);
+  const [operations, setOperations] = useState([]);
+  const [charCount, setCharCount] = useState(0);
+  const [backendStatus, setBackendStatus] = useState(null);
+  const [metrics, setMetrics] = useState(null);
 
   useEffect(() => {
     loadDocument();
@@ -33,35 +39,62 @@ export default function App() {
       currentWindow: true,
     });
 
-    chrome.tabs.sendMessage(tab.id, { type: "GET_DOC_INFO" }, (response) => {
-      setDoc(response);
+    if (!tab?.id) {
       setLoading(false);
-    });
+      return;
+    }
+
+    chrome.tabs.sendMessage(
+      tab.id,
+
+      {
+        type: "GET_DOC_INFO",
+      },
+
+      (response) => {
+        if (chrome.runtime.lastError || !response?.id) {
+          setDoc(null);
+        } else {
+          setDoc(response);
+        }
+
+        setLoading(false);
+      },
+    );
   }
 
   async function getModel() {
-    const [tab] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
+  const [tab] = await chrome.tabs.query({
+    active: true,
+    currentWindow: true,
+  });
 
-    if (!tab?.id) {
-      return null;
-    }
+  if (!tab?.id) {
+    return null;
+  }
 
-    return new Promise((resolve) => {
-      chrome.tabs.sendMessage(tab.id, { type: "GET_MODEL_CHUNK" }, (data) => {
-        if (!data?.found) {
-          resolve(null);
+  return new Promise((resolve, reject) => {
+    chrome.tabs.sendMessage(
+      tab.id,
+      { type: "GET_MODEL_CHUNK" },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
           return;
         }
 
-        resolve({ model: data.model });
-      });
-    });
-  }
+        resolve(response);
+      }
+    );
+  });
+}
 
   async function analyzeDocument() {
+  if (!doc?.id) {
+    alert("Open a Google Docs document in the active tab, then reopen this panel.");
+    return;
+  }
+
   try {
     setAnalyzing(true);
     console.log("=== Starting document analysis ===");
@@ -97,6 +130,7 @@ export default function App() {
     console.log("Word count:", words);
 
     setWordCount(words);
+    setCharCount(text.length);
 
     console.log("Fetching Drive revisions...");
     const driveRevisions = await getRevisions(doc.id, token);
@@ -118,6 +152,19 @@ export default function App() {
     const operations = parseChangeLog(revisionData);
     console.log("Operations:", operations);
     console.log("Operation count:", operations.length);
+    setOperations(operations);
+
+    // Persist the writing session (metadata only) to the backend. Kept
+    // non-fatal so a backend problem never breaks analysis or replay below.
+    try {
+      const saved = await saveSession(doc, operations);
+      console.log("Saved session to backend:", saved?.id);
+      setBackendStatus({ ok: true, id: saved?.id });
+      setMetrics(saved?.metrics ?? null);
+    } catch (backendError) {
+      console.warn("Backend save failed (analysis still OK):", backendError.message);
+      setBackendStatus({ ok: false, message: backendError.message });
+    }
 
     console.log("Building playback frames...");
     const frames = buildFrames(operations, tilesData.userMap);
@@ -136,49 +183,21 @@ export default function App() {
   }
 }
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  return (
-    <div
-      style={{
-        padding: 20,
-        width: 380,
-        fontFamily: "Arial",
-      }}
-    >
-      <h2>Writing Authenticity</h2>
-      <hr />
-      <h3>Document</h3>
-      <p>{doc?.title}</p>
-      <code>{doc?.id}</code>
-      <br />
-      <br />
-
-      <button onClick={analyzeDocument} disabled={analyzing}>
-        {analyzing ? "Analyzing..." : "Analyze Document"}
-      </button>
-
-      {googleToken && <p>✅ Google connected</p>}
-
-      {documentData && (
-        <>
-          <hr />
-          <h3>Statistics</h3>
-          <p>
-            Words:
-            <b> {wordCount}</b>
-          </p>
-          <p>
-            Revisions:
-            <b> {revisions.length}</b>
-          </p>
-        </>
-      )}
-
-      <PlaybackViewer frames={frames} />
-      <StatsBar stats={buildUserStats(frames)} />
-    </div>
-  );
+return (
+  <SidePanelUI
+    loading={loading}
+    doc={doc}
+    googleToken={googleToken}
+    documentData={documentData}
+    wordCount={wordCount}
+    revisions={revisions}
+    analyzing={analyzing}
+    analyzeDocument={analyzeDocument}
+    frames={frames}
+    operations={operations}
+    charCount={charCount}
+    backendStatus={backendStatus}
+    metrics={metrics}
+  />
+);
 }

@@ -1,0 +1,39 @@
+.sidepanel {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.analyzeButton {
+  width: 100%;
+  padding: 12px 16px;
+  background-color: #2e7d32;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.analyzeButton:hover:not(:disabled) {
+  background-color: #1b5e20;
+}
+
+.analyzeButton:disabled {
+  opacity: .6;
+  cursor: default;
+}
+
+.resultsContainer {
+  margin-top: 20px;
+  padding: 16px;
+
+  background-color: #dddcdc;
+  border-radius: 8px;
+
+  font-size: 14px;
+}

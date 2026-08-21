@@ -90,6 +90,7 @@ Application/
     ├── src/
     │   ├── api/
     │   ├── background/
+    │   ├── components/
     │   ├── content/
     │   ├── handlers/
     │   ├── parser/
