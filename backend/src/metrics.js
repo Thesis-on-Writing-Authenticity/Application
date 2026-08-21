@@ -1,11 +1,3 @@
-// Compute simple session metrics from stored events.
-//
-// These are the behavioural indicators the thesis and README describe:
-// typed vs pasted characters, paste-to-type ratio, editing activity, long
-// pauses and total writing time. They are derived on read so the raw events
-// remain the single source of truth.
-
-// A pause longer than this (milliseconds) is counted as a "long pause".
 export const LONG_PAUSE_MS = 2000;
 
 export function computeMetrics(session, events) {
@@ -49,7 +41,6 @@ export function computeMetrics(session, events) {
     totalWritingTimeMs,
     typedCharCount,
     pastedCharCount,
-    // Guard against divide-by-zero when nothing was typed.
     pasteToTypeRatio: typedCharCount > 0 ? pastedCharCount / typedCharCount : null,
     deletedCharCount,
     editEventCount,

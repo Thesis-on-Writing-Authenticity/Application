@@ -1,4 +1,3 @@
-// Routes for writing sessions and their events.
 import { Router } from "express";
 import { randomUUID } from "node:crypto";
 import { db } from "../db.js";
@@ -8,7 +7,6 @@ export const sessionsRouter = Router();
 
 const VALID_EVENT_TYPES = new Set(["INSERT", "DELETE", "PASTE", "PAUSE"]);
 
-// Prepared statements (compiled once, reused per request).
 const insertSession = db.prepare(`
   INSERT INTO sessions (id, document_id, document_title, source, started_at, ended_at, created_at)
   VALUES (?, ?, ?, ?, ?, NULL, ?)
@@ -23,7 +21,6 @@ const selectEventsForSession = db.prepare(
 );
 const setEndedAt = db.prepare("UPDATE sessions SET ended_at = ? WHERE id = ?");
 
-// A small error type so route handlers can signal a specific HTTP status.
 class HttpError extends Error {
   constructor(status, message) {
     super(message);
@@ -31,7 +28,6 @@ class HttpError extends Error {
   }
 }
 
-// POST /api/sessions — create a session, return its id.
 sessionsRouter.post("/", (req, res) => {
   const { documentId, documentTitle, source, startedAt } = req.body ?? {};
 
@@ -49,7 +45,6 @@ sessionsRouter.post("/", (req, res) => {
   res.status(201).json({ id });
 });
 
-// POST /api/sessions/:id/events — append a batch of events.
 sessionsRouter.post("/:id/events", (req, res) => {
   const session = selectSession.get(req.params.id);
   if (!session) {
@@ -79,7 +74,6 @@ sessionsRouter.post("/:id/events", (req, res) => {
   res.status(201).json({ inserted });
 });
 
-// PATCH /api/sessions/:id — mark the session as ended.
 sessionsRouter.patch("/:id", (req, res) => {
   const session = selectSession.get(req.params.id);
   if (!session) {
@@ -91,7 +85,6 @@ sessionsRouter.patch("/:id", (req, res) => {
   res.json({ id: session.id, endedAt });
 });
 
-// GET /api/sessions — list all sessions with computed metrics.
 sessionsRouter.get("/", (_req, res) => {
   const sessions = selectAllSessions.all().map((session) => ({
     ...session,
@@ -100,7 +93,6 @@ sessionsRouter.get("/", (_req, res) => {
   res.json({ sessions });
 });
 
-// Column order for the CSV export.
 const EXPORT_COLUMNS = [
   "sessionId", "documentId", "documentTitle", "sessionStartedAt", "sessionEndedAt",
   "type", "at", "length", "position", "start", "end", "author", "docSession", "index",
@@ -116,9 +108,6 @@ function toCsv(rows) {
   return [header, ...lines].join("\n");
 }
 
-// GET /api/sessions/export — one flattened row per event, for the offline
-// (Python) analysis. JSON by default, or CSV with ?format=csv. Declared before
-// "/:id" so "export" is not matched as a session id.
 sessionsRouter.get("/export", (req, res) => {
   const rows = [];
   for (const session of selectAllSessions.all()) {
@@ -150,7 +139,6 @@ sessionsRouter.get("/export", (req, res) => {
   res.json({ rows });
 });
 
-// GET /api/sessions/:id — one session with its events and metrics.
 sessionsRouter.get("/:id", (req, res) => {
   const session = selectSession.get(req.params.id);
   if (!session) {

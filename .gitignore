@@ -1,0 +1,7 @@
+.DS_Store
+
+evaluation-sessions.csv
+*-operations.json
+analysis/data/
+analysis/figures/
+analysis/__pycache__/
