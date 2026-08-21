@@ -1,7 +1,11 @@
 import "./Metrics.css";
 
-export default function Metrics({ metrics, backendStatus }) {
-  if (!metrics && !backendStatus) {
+export default function Metrics({
+  metrics,
+  backendStatus,
+  analysis,
+}) {
+  if (!metrics && !backendStatus && !analysis) {
     return null;
   }
 
@@ -21,22 +25,25 @@ export default function Metrics({ metrics, backendStatus }) {
     return `${(value / max) * 100}%`;
   };
 
-  const totalCharacters =
-  metrics.typedCharCount + metrics.pastedCharCount;
+  const typedCharCount = metrics?.typedCharCount ?? 0;
+  const pastedCharCount = metrics?.pastedCharCount ?? 0;
+
+  const totalCharacters = typedCharCount + pastedCharCount;
 
   const typedPercentage =
     totalCharacters > 0
-      ? (metrics.typedCharCount / totalCharacters) * 100
+      ? (typedCharCount / totalCharacters) * 100
       : 0;
 
   const pastedPercentage =
     totalCharacters > 0
-      ? (metrics.pastedCharCount / totalCharacters) * 100
+      ? (pastedCharCount / totalCharacters) * 100
       : 0;
 
   return (
     <>
       <hr />
+
       <h3>Behavioural Metrics</h3>
 
       {metrics && (
@@ -45,40 +52,55 @@ export default function Metrics({ metrics, backendStatus }) {
 
           <div className="metricRow">
             <span>Typed</span>
+
             <div className="metricBarContainer">
               <div
                 className="metricBar"
                 style={{
-                  width: getWidth(metrics.typedCharCount, maxCharacters),
+                  width: getWidth(
+                    metrics.typedCharCount,
+                    maxCharacters
+                  ),
                 }}
               />
             </div>
+
             <b>{metrics.typedCharCount}</b>
           </div>
 
           <div className="metricRow">
             <span>Pasted</span>
+
             <div className="metricBarContainer">
               <div
                 className="metricBar"
                 style={{
-                  width: getWidth(metrics.pastedCharCount, maxCharacters),
+                  width: getWidth(
+                    metrics.pastedCharCount,
+                    maxCharacters
+                  ),
                 }}
               />
             </div>
+
             <b>{metrics.pastedCharCount}</b>
           </div>
 
           <div className="metricRow">
             <span>Deleted</span>
+
             <div className="metricBarContainer">
               <div
                 className="metricBar"
                 style={{
-                  width: getWidth(metrics.deletedCharCount, maxCharacters),
+                  width: getWidth(
+                    metrics.deletedCharCount,
+                    maxCharacters
+                  ),
                 }}
               />
             </div>
+
             <b>{metrics.deletedCharCount}</b>
           </div>
 
@@ -86,27 +108,37 @@ export default function Metrics({ metrics, backendStatus }) {
 
           <div className="metricRow">
             <span>Delete Events</span>
+
             <div className="metricBarContainer">
               <div
                 className="metricBar"
                 style={{
-                  width: getWidth(metrics.editEventCount, maxEditing),
+                  width: getWidth(
+                    metrics.editEventCount,
+                    maxEditing
+                  ),
                 }}
               />
             </div>
+
             <b>{metrics.editEventCount}</b>
           </div>
 
           <div className="metricRow">
             <span>Long Pauses</span>
+
             <div className="metricBarContainer">
               <div
                 className="metricBar"
                 style={{
-                  width: getWidth(metrics.longPauseCount, maxEditing),
+                  width: getWidth(
+                    metrics.longPauseCount,
+                    maxEditing
+                  ),
                 }}
               />
             </div>
+
             <b>{metrics.longPauseCount}</b>
           </div>
 
@@ -130,28 +162,31 @@ export default function Metrics({ metrics, backendStatus }) {
             <div className="donutLegend">
               <div>
                 <span className="legendDot typedDot"></span>
-                Typed: <b>{metrics.typedCharCount}</b>
+                Typed: <b>{typedCharCount}</b>
               </div>
 
               <div>
                 <span className="legendDot pastedDot"></span>
-                Pasted: <b>{metrics.pastedCharCount}</b>
+                Pasted: <b>{pastedCharCount}</b>
               </div>
             </div>
           </div>
 
           <div>
             <span>First-to-last edit span </span>
-              <b>
-                {(metrics.totalWritingTimeMs / 3600000).toFixed(2)} h
-              </b>
-            </div>
-
+            <b>
+              {metrics.totalWritingTimeMs != null
+                ? (metrics.totalWritingTimeMs / 3600000).toFixed(2)
+                : "0.00"}{" "}
+              h
+            </b>
+          </div>
         </>
       )}
 
       {backendStatus && (
-        <p>Backend:
+        <p>
+          Backend:
           <b>
             {" "}
             {backendStatus.ok
@@ -160,6 +195,60 @@ export default function Metrics({ metrics, backendStatus }) {
           </b>
         </p>
       )}
+
+      {analysis && (
+  <>
+    <hr />
+
+    <div className="authenticityAnalysis">
+      <h3>Authenticity Analysis</h3>
+
+      <div className="scoreHeader">
+        <div>
+          <span className="scoreLabel">Authenticity Score</span>
+
+          <div className="scoreValue">
+            {Math.round((analysis.analysis?.score ?? 0) * 100)}%
+          </div>
+        </div>
+
+        <div className="scoreVerdict">
+          {(analysis.analysis?.verdict ?? "unknown")
+            .replace(/_/g, " ")}
+        </div>
+      </div>
+
+      <div className="scoreBarContainer">
+        <div
+          className="scoreBar"
+          style={{
+            width: `${Math.max(
+              0,
+              Math.min(
+                100,
+                (analysis.analysis?.score ?? 0) * 100
+              )
+            )}%`,
+          }}
+        />
+      </div>
+
+      {analysis.analysis?.reasons?.length > 0 && (
+        <div className="analysisReasons">
+          <h4>Analysis Factors</h4>
+
+          <ul>
+            {analysis.analysis.reasons.map(
+              (reason, index) => (
+                <li key={index}>{reason}</li>
+              )
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
+  </>
+)}
     </>
   );
 }

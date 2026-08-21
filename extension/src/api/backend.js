@@ -47,3 +47,13 @@ export async function endSession(sessionId, endedAt) {
 export async function getSession(sessionId) {
   return request(`/api/sessions/${sessionId}`);
 }
+
+// Fetch authenticity analysis for a session.
+export async function getSessionAnalysis(sessionId) {
+  return request(`/api/sessions/${sessionId}/analysis`);
+}
+
+// Fetch authenticity analysis + Gemini explanation.
+export async function getSessionAnalysisExplanation(sessionId) {
+  return request(`/api/sessions/${sessionId}/analysis/explain`);
+}

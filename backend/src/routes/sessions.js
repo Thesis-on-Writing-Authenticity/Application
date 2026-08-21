@@ -3,6 +3,8 @@ import { Router } from "express";
 import { randomUUID } from "node:crypto";
 import { db } from "../db.js";
 import { computeMetrics } from "../metrics.js";
+import { scoreAuthenticity } from "../authenticity.js";
+import { explainAnalysis } from "../agent.js";
 
 export const sessionsRouter = Router();
 
@@ -148,6 +150,45 @@ sessionsRouter.get("/export", (req, res) => {
     return;
   }
   res.json({ rows });
+});
+
+// GET /api/sessions/:id/analysis — authenticity verdict for one session.
+// Declared before "/:id" so "analysis" is not matched as a session id.
+sessionsRouter.get("/:id/analysis", (req, res) => {
+  const session = selectSession.get(req.params.id);
+  if (!session) {
+    throw new HttpError(404, "Session not found");
+  }
+
+  const events = selectEventsForSession.all(session.id);
+  const metrics = computeMetrics(session, events);
+  const analysis = scoreAuthenticity(metrics);
+
+  res.json({ id: session.id, metrics, analysis });
+});
+
+// GET /api/sessions/:id/analysis/explain — same as /analysis, plus a
+// Gemini-generated paragraph for the dashboard. Separate endpoint so a slow
+// or missing Gemini key never breaks the core (fast, offline) analysis.
+sessionsRouter.get("/:id/analysis/explain", async (req, res) => {
+  const session = selectSession.get(req.params.id);
+  if (!session) {
+    throw new HttpError(404, "Session not found");
+  }
+
+  const events = selectEventsForSession.all(session.id);
+  const metrics = computeMetrics(session, events);
+  const analysis = scoreAuthenticity(metrics);
+
+  let explanation = null;
+  let explanationError = null;
+  try {
+    explanation = await explainAnalysis(analysis);
+  } catch (err) {
+    explanationError = err.message;
+  }
+
+  res.json({ id: session.id, metrics, analysis, explanation, explanationError });
 });
 
 // GET /api/sessions/:id — one session with its events and metrics.
