@@ -1,7 +1,7 @@
 export const SHORT_PAUSE_MS = 1000;
-export const LONG_PAUSE_MS = 5000;
+export const LONG_PAUSE_MS = 2000;
 export const VERY_LONG_PAUSE_MS = 15000;
-export const SESSION_BREAK_MS = 10 * 60 * 1000;
+export const SESSION_BREAK_MS = 10 * 60 * 1000; // 10 minutes
 
 export function computeMetrics(session, events) {
   let typedCharCount = 0;
@@ -36,8 +36,11 @@ export function computeMetrics(session, events) {
    * positional information is available.
    */
   const pasteEvents = [];
+  const insertTimestamps = [];
 
   for (const event of events) {
+    const meta = event.meta ? safeParseMeta(event.meta) : null;
+
     switch (event.type) {
       case "INSERT": {
         typedCharCount += event.length;
@@ -45,6 +48,11 @@ export function computeMetrics(session, events) {
 
         if (event.length > maxInsertLength) {
           maxInsertLength = event.length;
+        }
+
+        const ts = Date.parse(event.at);
+        if (!Number.isNaN(ts)) {
+          insertTimestamps.push(ts);
         }
 
         break;
@@ -56,15 +64,9 @@ export function computeMetrics(session, events) {
 
         pasteEvents.push({
           length: event.length,
-          index:
-            event.index ??
-            event.position ??
-            event.startIndex ??
-            null,
-          timestamp:
-            event.timestamp ??
-            event.ts ??
-            null,
+          remainingLength: event.length,
+          index: meta?.position ?? null,
+          timestamp: Date.parse(event.at) || null,
         });
 
         break;
@@ -80,23 +82,18 @@ export function computeMetrics(session, events) {
          * the event provides enough positional information to establish
          * that relationship.
          */
-        const affectedPaste = findAffectedPaste(
-          event,
-          pasteEvents
-        );
+        const affectedPaste = findAffectedPaste(meta, pasteEvents);
 
         if (affectedPaste) {
           editsAfterPaste += 1;
 
-          editedCharsAfterPaste += Math.min(
+          const consumed = Math.min(
             event.length,
-            affectedPaste.remainingLength
+            affectedPaste.remainingLength,
           );
 
-          affectedPaste.remainingLength -= Math.min(
-            event.length,
-            affectedPaste.remainingLength
-          );
+          editedCharsAfterPaste += consumed;
+          affectedPaste.remainingLength -= consumed;
         }
 
         break;
@@ -132,17 +129,11 @@ export function computeMetrics(session, events) {
     }
   }
 
-  const totalWritingTimeMs = durationMs(
-    session.started_at,
-    session.ended_at
-  );
+  const totalWritingTimeMs = durationMs(session.started_at, session.ended_at);
 
   const activeWritingTimeMs =
     totalWritingTimeMs != null
-      ? Math.max(
-          0,
-          totalWritingTimeMs - sessionBreakTotalMs
-        )
+      ? Math.max(0, totalWritingTimeMs - sessionBreakTotalMs)
       : null;
 
   return {
@@ -151,22 +142,15 @@ export function computeMetrics(session, events) {
 
     typedCharCount,
     pastedCharCount,
-
     pasteToTypeRatio:
-      typedCharCount > 0
-        ? pastedCharCount / typedCharCount
-        : null,
-
+      typedCharCount > 0 ? pastedCharCount / typedCharCount : null,
     deletedCharCount,
     editEventCount,
 
     insertCount,
     maxInsertLength,
 
-    meanInsertLength:
-      insertCount > 0
-        ? typedCharCount / insertCount
-        : 0,
+    meanInsertLength: insertCount > 0 ? typedCharCount / insertCount : 0,
 
     pasteCount,
 
@@ -175,6 +159,7 @@ export function computeMetrics(session, events) {
      */
     editsAfterPaste,
     editedCharsAfterPaste,
+    insertTimestamps,
 
     /*
      * Keep the individual paste events available for the
@@ -190,10 +175,7 @@ export function computeMetrics(session, events) {
     longPauseTotalMs,
     veryLongPauseTotalMs,
 
-    totalPauseCount:
-      shortPauseCount +
-      longPauseCount +
-      veryLongPauseCount,
+    totalPauseCount: shortPauseCount + longPauseCount + veryLongPauseCount,
 
     sessionBreakCount,
     sessionBreakTotalMs,
@@ -204,12 +186,20 @@ export function computeMetrics(session, events) {
   };
 }
 
-function findAffectedPaste(event, pasteEvents) {
-  const deleteIndex =
-    event.index ??
-    event.position ??
-    event.startIndex ??
-    null;
+function safeParseMeta(meta) {
+  if (typeof meta !== "string") {
+    return meta;
+  }
+
+  try {
+    return JSON.parse(meta);
+  } catch {
+    return null;
+  }
+}
+
+function findAffectedPaste(meta, pasteEvents) {
+  const deleteIndex = meta?.start ?? meta?.position ?? null;
 
   if (deleteIndex == null) {
     return null;
@@ -223,8 +213,7 @@ function findAffectedPaste(event, pasteEvents) {
     }
 
     const pasteStart = paste.index;
-    const pasteEnd =
-      paste.index + paste.remainingLength;
+    const pasteEnd = paste.index + paste.remainingLength;
 
     if (
       deleteIndex >= pasteStart &&
@@ -262,10 +251,7 @@ function durationMs(startedAt, endedAt) {
   const start = Date.parse(startedAt);
   const end = Date.parse(endedAt);
 
-  if (
-    Number.isNaN(start) ||
-    Number.isNaN(end)
-  ) {
+  if (Number.isNaN(start) || Number.isNaN(end)) {
     return null;
   }
 
