@@ -1,6 +1,6 @@
 .metricRow {
   display: grid;
-  grid-template-columns: 90px 1fr 35px;
+  grid-template-columns: 90px 1fr 55px;
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
@@ -42,13 +42,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20px;
-  margin: 15px 0;
+  gap: 22px;
+  margin: 18px 0;
 }
 
 .donut {
   width: 100px;
   height: 100px;
+  min-width: 100px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -56,20 +57,46 @@
 }
 
 .donutCenter {
-  width: 65px;
-  height: 65px;
+  width: 66px;
+  height: 66px;
   border-radius: 50%;
   background: white;
+
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  font-size: 14px;
+
+  text-align: center;
+  line-height: 1.1;
+}
+
+.donutCenter strong {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.donutCenter span {
+  margin-top: 3px;
+  font-size: 10px;
+  color: #666;
+  font-weight: 500;
 }
 
 .donutLegend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
   font-size: 13px;
-  line-height: 1.8;
+  line-height: 1.2;
+}
+
+.donutLegend > div {
+  display: grid;
+  grid-template-columns: 9px auto;
+  column-gap: 7px;
+  align-items: center;
 }
 
 .legendDot {
@@ -77,7 +104,12 @@
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  margin-right: 6px;
+  grid-row: span 2;
+}
+
+.donutLegend b {
+  font-weight: 600;
+  margin-left: 2px;
 }
 
 .typedDot {
@@ -86,4 +118,105 @@
 
 .pastedDot {
   background-color: #1976d2;
+}
+
+.authenticityAnalysis {
+  margin-top: 12px;
+}
+
+.scoreHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.scoreLabel {
+  display: block;
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.scoreValue {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.scoreVerdict {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: capitalize;
+
+  padding: 6px 10px;
+  border-radius: 6px;
+
+  background: #f0f0f0;
+  color: #333;
+
+  white-space: nowrap;
+}
+
+.scoreBarContainer {
+  width: 100%;
+  height: 12px;
+  background: #e5e5e5;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.scoreBar {
+  height: 100%;
+  border-radius: 999px;
+  background: #1976d2;
+  transition: width 0.5s ease;
+}
+
+.analysisReasons {
+  margin-top: 16px;
+}
+
+.analysisReasons h4 {
+  margin-bottom: 8px;
+}
+
+.analysisReasons ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.analysisReasons li {
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+@media (max-width: 360px) {
+  .metricRow {
+    grid-template-columns: 80px 1fr 50px;
+  }
+
+  .pasteTypeChart {
+    gap: 14px;
+  }
+
+  .donut {
+    width: 90px;
+    height: 90px;
+    min-width: 90px;
+  }
+
+  .donutCenter {
+    width: 60px;
+    height: 60px;
+  }
+
+  .donutLegend {
+    font-size: 12px;
+  }
+
+  .scoreValue {
+    font-size: 28px;
+  }
 }

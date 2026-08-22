@@ -2,6 +2,8 @@ import { Router } from "express";
 import { randomUUID } from "node:crypto";
 import { db } from "../db.js";
 import { computeMetrics } from "../metrics.js";
+import { scoreAuthenticity } from "../authenticity.js";
+import { explainAnalysis } from "../agent.js";
 
 export const sessionsRouter = Router();
 
