@@ -1,7 +1,4 @@
-export const SHORT_PAUSE_MS = 1000;
-export const LONG_PAUSE_MS = 5000;
-export const VERY_LONG_PAUSE_MS = 15000;
-export const SESSION_BREAK_MS = 10 * 60 * 1000;
+export const LONG_PAUSE_MS = 2000;
 
 export function computeMetrics(session, events) {
   let typedCharCount = 0;
@@ -151,12 +148,7 @@ export function computeMetrics(session, events) {
 
     typedCharCount,
     pastedCharCount,
-
-    pasteToTypeRatio:
-      typedCharCount > 0
-        ? pastedCharCount / typedCharCount
-        : null,
-
+    pasteToTypeRatio: typedCharCount > 0 ? pastedCharCount / typedCharCount : null,
     deletedCharCount,
     editEventCount,
 
