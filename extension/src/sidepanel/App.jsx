@@ -120,6 +120,10 @@ export default function App() {
       debugLog("=== Starting document analysis ===");
       debugLog("Document ID:", doc.id);
 
+      // ---------------------------------------------------------
+      // GET GOOGLE DOC MODEL
+      // ---------------------------------------------------------
+
       debugLog("Fetching model...");
 
       const modelData = await getModel();
@@ -130,6 +134,9 @@ export default function App() {
 
       debugLog("Latest revision:", latestRevision);
 
+      // ---------------------------------------------------------
+      // GOOGLE AUTH
+      // ---------------------------------------------------------
 
       debugLog("Logging into Google...");
 
@@ -139,6 +146,10 @@ export default function App() {
 
       if (!isCurrentRun()) return;
       setGoogleToken(token);
+
+      // ---------------------------------------------------------
+      // GOOGLE DOC DATA
+      // ---------------------------------------------------------
 
       debugLog("Fetching Google Docs tiles...");
 
@@ -155,8 +166,13 @@ export default function App() {
       if (!isCurrentRun()) return;
       setDocumentData(document);
 
+      // ---------------------------------------------------------
+      // DOCUMENT TEXT
+      // ---------------------------------------------------------
+
       const text = extractText(document);
 
+      debugLog("Extracted text:", text);
       debugLog("Extracted text length:", text.length);
 
       const words = text.trim().split(/\s+/).filter(Boolean).length;
@@ -164,6 +180,10 @@ export default function App() {
       if (!isCurrentRun()) return;
       setWordCount(words);
       setCharCount(text.length);
+
+      // ---------------------------------------------------------
+      // DRIVE REVISIONS
+      // ---------------------------------------------------------
 
       debugLog("Fetching Drive revisions...");
 
@@ -174,6 +194,9 @@ export default function App() {
       if (!isCurrentRun()) return;
       setRevisions(driveRevisions);
 
+      // ---------------------------------------------------------
+      // DOCS CHANGELOG
+      // ---------------------------------------------------------
 
       debugLog("Fetching Docs revision changelog...");
 
@@ -184,6 +207,7 @@ export default function App() {
         token
       );
 
+      debugLog("Raw Docs revisions:", docsRevisions);
       debugLog("Raw Docs revisions length:", docsRevisions?.length);
 
       let revisionData;
@@ -197,6 +221,11 @@ export default function App() {
       }
 
       debugLog("Parsed revision data:", revisionData);
+
+      // ---------------------------------------------------------
+      // PARSE OPERATIONS
+      // ---------------------------------------------------------
+
       debugLog("Parsing change log...");
 
       let parsedOperations;
@@ -208,10 +237,15 @@ export default function App() {
         );
       }
 
+      debugLog("Operations:", parsedOperations);
       debugLog("Operation count:", parsedOperations.length);
 
       if (!isCurrentRun()) return;
       setOperations(parsedOperations);
+
+      // ---------------------------------------------------------
+      // BACKEND SESSION
+      // ---------------------------------------------------------
 
       try {
         debugLog("Saving writing session to backend...");
@@ -232,9 +266,13 @@ export default function App() {
 
         setBackendStatus({ ok: true, id: sessionId });
 
+        // These are the computed behavioural metrics
+        // returned by GET /api/sessions/:id
         setMetrics(saved.metrics ?? null);
 
-
+        // -------------------------------------------------------
+        // AUTHENTICITY ANALYSIS
+        // -------------------------------------------------------
 
         try {
           setAnalysisLoading(true);
@@ -244,7 +282,8 @@ export default function App() {
 
           const analysisResult = await getSessionAnalysis(sessionId);
 
-          debugLog("=== AUTHENTICITY ANALYSIS RESULT ===", analysisResult);
+          debugLog("=== AUTHENTICITY ANALYSIS RESULT ===");
+          debugLog(analysisResult);
 
           if (!isCurrentRun()) return;
           setAnalysis(analysisResult);
@@ -270,10 +309,15 @@ export default function App() {
         setAnalysisError(null);
       }
 
+      // ---------------------------------------------------------
+      // PLAYBACK
+      // ---------------------------------------------------------
+
       debugLog("Building playback frames...");
 
       const builtFrames = buildFrames(parsedOperations, tilesData.userMap);
 
+      debugLog("Frames:", builtFrames);
       debugLog("Frame count:", builtFrames.length);
 
       if (!isCurrentRun()) return;
@@ -282,6 +326,7 @@ export default function App() {
       debugLog("=== Analysis complete ===");
     } catch (error) {
       console.error("Analysis failed:", error);
+      console.error("Stack:", error.stack);
 
       if (isCurrentRun()) {
         setAnalysisError(error.message);

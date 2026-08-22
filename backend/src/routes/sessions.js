@@ -23,6 +23,18 @@ const selectEventsForSession = db.prepare(
 );
 const setEndedAt = db.prepare("UPDATE sessions SET ended_at = ? WHERE id = ?");
 
+const insertEventsBatch = db.transaction((sessionId, events) => {
+  for (const event of events) {
+    insertEvent.run(
+      sessionId,
+      event.type,
+      event.at ?? null,
+      Number.isFinite(event.length) ? event.length : 0,
+      event.meta != null ? JSON.stringify(event.meta) : null,
+    );
+  }
+});
+
 class HttpError extends Error {
   constructor(status, message) {
     super(message);
@@ -58,22 +70,15 @@ sessionsRouter.post("/:id/events", (req, res) => {
     throw new HttpError(400, "Body must contain an 'events' array");
   }
 
-  let inserted = 0;
   for (const event of events) {
     if (!VALID_EVENT_TYPES.has(event?.type)) {
       throw new HttpError(400, `Invalid event type: ${event?.type}`);
     }
-    insertEvent.run(
-      session.id,
-      event.type,
-      event.at ?? null,
-      Number.isFinite(event.length) ? event.length : 0,
-      event.meta != null ? JSON.stringify(event.meta) : null,
-    );
-    inserted += 1;
   }
 
-  res.status(201).json({ inserted });
+  insertEventsBatch(session.id, events);
+
+  res.status(201).json({ inserted: events.length });
 });
 
 sessionsRouter.patch("/:id", (req, res) => {
@@ -153,4 +158,35 @@ sessionsRouter.get("/:id", (req, res) => {
     events,
     metrics: computeMetrics(session, events),
   });
+});
+
+sessionsRouter.get("/:id/analysis", (req, res) => {
+  const session = selectSession.get(req.params.id);
+  if (!session) {
+    throw new HttpError(404, "Session not found");
+  }
+
+  const events = selectEventsForSession.all(session.id);
+  const metrics = computeMetrics(session, events);
+  const analysis = scoreAuthenticity(metrics);
+
+  res.json({ id: session.id, metrics, analysis });
+});
+
+sessionsRouter.get("/:id/analysis/explain", async (req, res, next) => {
+  const session = selectSession.get(req.params.id);
+  if (!session) {
+    throw new HttpError(404, "Session not found");
+  }
+
+  const events = selectEventsForSession.all(session.id);
+  const metrics = computeMetrics(session, events);
+  const analysis = scoreAuthenticity(metrics);
+
+  try {
+    const explanation = await explainAnalysis(analysis);
+    res.json({ id: session.id, metrics, analysis, explanation });
+  } catch (error) {
+    next(new HttpError(502, `Explanation generation failed: ${error.message}`));
+  }
 });
