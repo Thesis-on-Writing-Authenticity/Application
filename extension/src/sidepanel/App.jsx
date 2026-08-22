@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { loginGoogle } from "../api/googleAuth";
 import {
   getGoogleDocument,
@@ -9,9 +9,17 @@ import { getRevisions } from "../api/googleDrive";
 import { extractText } from "../parser/googleDocsTextExtractor";
 import { parseChangeLog } from "../parser/changelogParser";
 import { buildFrames } from "../replay/buildFrames";
-import SidePanelUI from "./SidePanelUI";
+import SidePanelUI from "./SidepanelUI";
 import { saveSession } from "../api/writingEvents";
 import { getSessionAnalysis } from "../api/backend";
+
+const DEBUG = true; // Set to true to enable console logging for debugging.
+
+function debugLog(...args) {
+  if (DEBUG) {
+    console.log(...args);
+  }
+}
 
 export default function App() {
   const [loading, setLoading] = useState(true);
@@ -31,6 +39,8 @@ export default function App() {
   const [analysis, setAnalysis] = useState(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState(null);
+
+  const runIdRef = useRef(0);
 
   useEffect(() => {
     loadDocument();
@@ -98,290 +108,189 @@ export default function App() {
       return;
     }
 
+    const runId = ++runIdRef.current;
+    const isCurrentRun = () => runIdRef.current === runId;
+
     try {
       setAnalyzing(true);
-
-      // Clear previous analysis
       setAnalysis(null);
       setAnalysisError(null);
+      setBackendStatus(null);
 
-      console.log("=== Starting document analysis ===");
-      console.log("Document ID:", doc.id);
+      debugLog("=== Starting document analysis ===");
+      debugLog("Document ID:", doc.id);
 
-      // ---------------------------------------------------------
-      // GET GOOGLE DOC MODEL
-      // ---------------------------------------------------------
-
-      console.log("Fetching model...");
+      debugLog("Fetching model...");
 
       const modelData = await getModel();
 
-      console.log("Model data:", modelData);
+      debugLog("Model data:", modelData);
 
       const latestRevision = modelData?.model?.revision;
 
-      console.log("Latest revision:", latestRevision);
+      debugLog("Latest revision:", latestRevision);
 
-      // ---------------------------------------------------------
-      // GOOGLE AUTH
-      // ---------------------------------------------------------
 
-      console.log("Logging into Google...");
+      debugLog("Logging into Google...");
 
       const token = await loginGoogle();
 
-      console.log(
-        "Google token acquired:",
-        token ? "YES" : "NO"
-      );
+      debugLog("Google token acquired:", token ? "YES" : "NO");
 
+      if (!isCurrentRun()) return;
       setGoogleToken(token);
 
-      // ---------------------------------------------------------
-      // GOOGLE DOC DATA
-      // ---------------------------------------------------------
+      debugLog("Fetching Google Docs tiles...");
 
-      console.log("Fetching Google Docs tiles...");
+      const tilesData = await getGoogleDocsTiles(doc.id, token);
 
-      const tilesData = await getGoogleDocsTiles(
-        doc.id,
-        token
-      );
+      debugLog("Tiles data:", tilesData);
 
-      console.log("Tiles data:", tilesData);
+      debugLog("Fetching Google Document...");
 
-      console.log("Fetching Google Document...");
+      const document = await getGoogleDocument(doc.id, token);
 
-      const document = await getGoogleDocument(
-        doc.id,
-        token
-      );
+      debugLog("Document:", document);
 
-      console.log("Document:", document);
-
+      if (!isCurrentRun()) return;
       setDocumentData(document);
-
-      // ---------------------------------------------------------
-      // DOCUMENT TEXT
-      // ---------------------------------------------------------
 
       const text = extractText(document);
 
-      console.log("Extracted text:", text);
+      debugLog("Extracted text length:", text.length);
 
-      const words = text
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean)
-        .length;
+      const words = text.trim().split(/\s+/).filter(Boolean).length;
 
+      if (!isCurrentRun()) return;
       setWordCount(words);
       setCharCount(text.length);
 
-      // ---------------------------------------------------------
-      // DRIVE REVISIONS
-      // ---------------------------------------------------------
+      debugLog("Fetching Drive revisions...");
 
-      console.log("Fetching Drive revisions...");
+      const driveRevisions = await getRevisions(doc.id, token);
 
-      const driveRevisions = await getRevisions(
+      debugLog("Drive revisions:", driveRevisions);
+
+      if (!isCurrentRun()) return;
+      setRevisions(driveRevisions);
+
+
+      debugLog("Fetching Docs revision changelog...");
+
+      const docsRevisions = await getGoogleDocsRevisions(
         doc.id,
+        1,
+        latestRevision,
         token
       );
 
-      console.log(
-        "Drive revisions:",
-        driveRevisions
-      );
+      debugLog("Raw Docs revisions length:", docsRevisions?.length);
 
-      setRevisions(driveRevisions);
-
-      // ---------------------------------------------------------
-      // DOCS CHANGELOG
-      // ---------------------------------------------------------
-
-      console.log(
-        "Fetching Docs revision changelog..."
-      );
-
-      const docsRevisions =
-        await getGoogleDocsRevisions(
-          doc.id,
-          1,
-          latestRevision,
-          token
+      let revisionData;
+      try {
+        const cleaned = docsRevisions.replace(")]}'", "").trim();
+        revisionData = JSON.parse(cleaned);
+      } catch (parseError) {
+        throw new Error(
+          `Failed to parse the Docs revision changelog: ${parseError.message}`
         );
+      }
 
-      console.log(
-        "Raw Docs revisions:",
-        docsRevisions
-      );
+      debugLog("Parsed revision data:", revisionData);
+      debugLog("Parsing change log...");
 
-      const cleaned = docsRevisions
-        .replace(")]}'", "")
-        .trim();
+      let parsedOperations;
+      try {
+        parsedOperations = parseChangeLog(revisionData);
+      } catch (parseError) {
+        throw new Error(
+          `Failed to parse change log operations: ${parseError.message}`
+        );
+      }
 
-      const revisionData = JSON.parse(cleaned);
+      debugLog("Operation count:", parsedOperations.length);
 
-      console.log(
-        "Parsed revision data:",
-        revisionData
-      );
-
-      // ---------------------------------------------------------
-      // PARSE OPERATIONS
-      // ---------------------------------------------------------
-
-      console.log("Parsing change log...");
-
-      const parsedOperations =
-        parseChangeLog(revisionData);
-
-      console.log(
-        "Operations:",
-        parsedOperations
-      );
-
-      console.log(
-        "Operation count:",
-        parsedOperations.length
-      );
-
+      if (!isCurrentRun()) return;
       setOperations(parsedOperations);
 
-      // ---------------------------------------------------------
-      // BACKEND SESSION
-      // ---------------------------------------------------------
-
       try {
-        console.log(
-          "Saving writing session to backend..."
-        );
+        debugLog("Saving writing session to backend...");
 
-        const saved = await saveSession(
-          doc,
-          parsedOperations
-        );
+        const saved = await saveSession(doc, parsedOperations);
 
-        console.log(
-          "Saved session:",
-          saved
-        );
+        debugLog("Saved session:", saved);
 
         if (!saved?.id) {
-          throw new Error(
-            "Backend did not return a session ID."
-          );
+          throw new Error("Backend did not return a session ID.");
         }
 
         const sessionId = saved.id;
 
-        console.log(
-          "Backend session ID:",
-          sessionId
-        );
+        debugLog("Backend session ID:", sessionId);
 
-        setBackendStatus({
-          ok: true,
-          id: sessionId,
-        });
+        if (!isCurrentRun()) return;
 
-        // These are the computed behavioural metrics
-        // returned by GET /api/sessions/:id
+        setBackendStatus({ ok: true, id: sessionId });
+
         setMetrics(saved.metrics ?? null);
 
-        // -------------------------------------------------------
-        // AUTHENTICITY ANALYSIS
-        // -------------------------------------------------------
+
 
         try {
           setAnalysisLoading(true);
           setAnalysisError(null);
 
-          console.log(
-            `Requesting authenticity analysis for ${sessionId}...`
-          );
+          debugLog(`Requesting authenticity analysis for ${sessionId}...`);
 
-          const analysisResult =
-            await getSessionAnalysis(sessionId);
+          const analysisResult = await getSessionAnalysis(sessionId);
 
-          console.log(
-            "=== AUTHENTICITY ANALYSIS RESULT ==="
-          );
+          debugLog("=== AUTHENTICITY ANALYSIS RESULT ===", analysisResult);
 
-          console.log(analysisResult);
-
+          if (!isCurrentRun()) return;
           setAnalysis(analysisResult);
         } catch (error) {
-          console.error(
-            "Authenticity analysis failed:",
-            error
-          );
+          console.error("Authenticity analysis failed:", error);
 
+          if (!isCurrentRun()) return;
           setAnalysisError(
-            error.message ||
-              "Failed to retrieve authenticity analysis."
+            error.message || "Failed to retrieve authenticity analysis."
           );
         } finally {
-          setAnalysisLoading(false);
+          if (isCurrentRun()) {
+            setAnalysisLoading(false);
+          }
         }
       } catch (backendError) {
-        console.warn(
-          "Backend save failed:",
-          backendError.message
-        );
+        console.warn("Backend save failed:", backendError.message);
 
-        setBackendStatus({
-          ok: false,
-          message: backendError.message,
-        });
-
+        if (!isCurrentRun()) return;
+        setBackendStatus({ ok: false, message: backendError.message });
         setMetrics(null);
         setAnalysis(null);
+        setAnalysisError(null);
       }
 
-      // ---------------------------------------------------------
-      // PLAYBACK
-      // ---------------------------------------------------------
+      debugLog("Building playback frames...");
 
-      console.log(
-        "Building playback frames..."
-      );
+      const builtFrames = buildFrames(parsedOperations, tilesData.userMap);
 
-      const builtFrames = buildFrames(
-        parsedOperations,
-        tilesData.userMap
-      );
+      debugLog("Frame count:", builtFrames.length);
 
-      console.log(
-        "Frames:",
-        builtFrames
-      );
-
-      console.log(
-        "Frame count:",
-        builtFrames.length
-      );
-
+      if (!isCurrentRun()) return;
       setFrames(builtFrames);
 
-      console.log(
-        "=== Analysis complete ==="
-      );
+      debugLog("=== Analysis complete ===");
     } catch (error) {
-      console.error(
-        "Analysis failed:",
-        error
-      );
+      console.error("Analysis failed:", error);
 
-      console.error(
-        "Stack:",
-        error.stack
-      );
-
-      alert(error.message);
+      if (isCurrentRun()) {
+        setAnalysisError(error.message);
+        alert(error.message);
+      }
     } finally {
-      setAnalyzing(false);
+      if (isCurrentRun()) {
+        setAnalyzing(false);
+      }
     }
   }
 

@@ -1,5 +1,38 @@
 import "./Metrics.css";
 
+function formatWritingDuration(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) {
+    return "0 min";
+  }
+
+  const totalMinutes = Math.round(ms / 60000);
+
+  if (totalMinutes < 60) {
+    return `${totalMinutes} min`;
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (minutes === 0) {
+    return `${hours} h`;
+  }
+
+  return `${hours} h ${minutes} min`;
+}
+
+function formatPercentage(value) {
+  if (!Number.isFinite(value)) {
+    return "0%";
+  }
+
+  if (Number.isInteger(value)) {
+    return `${value}%`;
+  }
+
+  return `${value.toFixed(1)}%`;
+}
+
 export default function Metrics({
   metrics,
   backendStatus,
@@ -17,18 +50,24 @@ export default function Metrics({
 
   const maxEditing = Math.max(
     metrics?.editEventCount ?? 0,
-    metrics?.longPauseCount ?? 0
+    metrics?.shortPauseCount ?? 0,
+    metrics?.longPauseCount ?? 0,
+    metrics?.veryLongPauseCount ?? 0
   );
 
   const getWidth = (value, max) => {
-    if (!value || !max) return "0%";
+    if (!value || !max) {
+      return "0%";
+    }
+
     return `${(value / max) * 100}%`;
   };
 
   const typedCharCount = metrics?.typedCharCount ?? 0;
   const pastedCharCount = metrics?.pastedCharCount ?? 0;
 
-  const totalCharacters = typedCharCount + pastedCharCount;
+  const totalCharacters =
+    typedCharCount + pastedCharCount;
 
   const typedPercentage =
     totalCharacters > 0
@@ -39,6 +78,9 @@ export default function Metrics({
     totalCharacters > 0
       ? (pastedCharCount / totalCharacters) * 100
       : 0;
+
+  const sessionBreakCount = metrics?.sessionBreakCount ?? 0;
+  const sessionBreakTotalMs = metrics?.sessionBreakTotalMs ?? 0;
 
   return (
     <>
@@ -124,8 +166,28 @@ export default function Metrics({
             <b>{metrics.editEventCount}</b>
           </div>
 
+          <h4>Pause Activity</h4>
+
           <div className="metricRow">
-            <span>Long Pauses</span>
+            <span>Short Pauses (1&ndash;5s)</span>
+
+            <div className="metricBarContainer">
+              <div
+                className="metricBar"
+                style={{
+                  width: getWidth(
+                    metrics.shortPauseCount,
+                    maxEditing
+                  ),
+                }}
+              />
+            </div>
+
+            <b>{metrics.shortPauseCount ?? 0}</b>
+          </div>
+
+          <div className="metricRow">
+            <span>Long Pauses (5&ndash;15s)</span>
 
             <div className="metricBarContainer">
               <div
@@ -139,8 +201,38 @@ export default function Metrics({
               />
             </div>
 
-            <b>{metrics.longPauseCount}</b>
+            <b>{metrics.longPauseCount ?? 0}</b>
           </div>
+
+          <div className="metricRow">
+            <span>Very Long Pauses (15s+)</span>
+
+            <div className="metricBarContainer">
+              <div
+                className="metricBar"
+                style={{
+                  width: getWidth(
+                    metrics.veryLongPauseCount,
+                    maxEditing
+                  ),
+                }}
+              />
+            </div>
+
+            <b>{metrics.veryLongPauseCount ?? 0}</b>
+          </div>
+
+          {sessionBreakCount > 0 && (
+            <div className="metricRow sessionBreakRow">
+              <span>Breaks (10min+)</span>
+
+              <span className="sessionBreakDetail">
+                {sessionBreakCount} break
+                {sessionBreakCount === 1 ? "" : "s"}, totalling{" "}
+                {formatWritingDuration(sessionBreakTotalMs)}
+              </span>
+            </div>
+          )}
 
           <div className="pasteTypeChart">
             <div
@@ -153,34 +245,61 @@ export default function Metrics({
               }}
             >
               <div className="donutCenter">
-                {metrics.pasteToTypeRatio == null
-                  ? "-"
-                  : metrics.pasteToTypeRatio.toFixed(2)}
+                <strong>
+                  {formatPercentage(pastedPercentage)}
+                </strong>
+
+                <span>pasted</span>
               </div>
             </div>
 
             <div className="donutLegend">
               <div>
                 <span className="legendDot typedDot"></span>
-                Typed: <b>{typedCharCount}</b>
+
+                <span>Typed</span>
+
+                <b>
+                  {typedCharCount} (
+                  {formatPercentage(typedPercentage)})
+                </b>
               </div>
 
               <div>
                 <span className="legendDot pastedDot"></span>
-                Pasted: <b>{pastedCharCount}</b>
+
+                <span>Pasted</span>
+
+                <b>
+                  {pastedCharCount} (
+                  {formatPercentage(pastedPercentage)})
+                </b>
               </div>
             </div>
           </div>
 
+  
           <div>
             <span>First-to-last edit span </span>
+
             <b>
-              {metrics.totalWritingTimeMs != null
-                ? (metrics.totalWritingTimeMs / 3600000).toFixed(2)
-                : "0.00"}{" "}
-              h
+              {formatWritingDuration(
+                metrics.totalWritingTimeMs
+              )}
             </b>
           </div>
+
+          {sessionBreakCount > 0 && (
+            <div>
+              <span>Active writing time </span>
+
+              <b>
+                {formatWritingDuration(
+                  metrics.activeWritingTimeMs
+                )}
+              </b>
+            </div>
+          )}
         </>
       )}
 
@@ -197,88 +316,67 @@ export default function Metrics({
       )}
 
       {analysis && (
-  <>
-    <hr />
+        <>
+          <hr />
 
-    <div className="authenticityAnalysis">
-      <h3>Authenticity Analysis</h3>
+          <div className="authenticityAnalysis">
+            <h3>Authenticity Analysis</h3>
 
-      <div className="scoreHeader">
-        <div>
-          <span className="scoreLabel">Authenticity Score</span>
+            <div className="scoreHeader">
+              <div>
+                <span className="scoreLabel">
+                  Authenticity Score
+                </span>
 
-          <div className="scoreValue">
-            {Math.round((analysis.analysis?.score ?? 0) * 100)}%
-          </div>
-        </div>
+                <div className="scoreValue">
+                  {Math.round(
+                    (analysis.analysis?.score ?? 0) * 100
+                  )}
+                  %
+                </div>
+              </div>
 
-        <div className="scoreVerdict">
-          {(analysis.analysis?.verdict ?? "unknown")
-            .replace(/_/g, " ")}
-        </div>
-      </div>
+              <div className="scoreVerdict">
+                {(analysis.analysis?.verdict ??
+                  "unknown"
+                ).replace(/_/g, " ")}
+              </div>
+            </div>
 
-      <div className="scoreBarContainer">
-        <div
-          className="scoreBar"
-          style={{
-            width: `${Math.max(
-              0,
-              Math.min(
-                100,
-                (analysis.analysis?.score ?? 0) * 100
-              )
-            )}%`,
-          }}
-        />
-      </div>
+            <div className="scoreBarContainer">
+              <div
+                className="scoreBar"
+                style={{
+                  width: `${Math.max(
+                    0,
+                    Math.min(
+                      100,
+                      (analysis.analysis?.score ??
+                        0) * 100
+                    )
+                  )}%`,
+                }}
+              />
+            </div>
 
-      {analysis.analysis?.reasons?.length > 0 && (
-        <div className="analysisReasons">
-          <h4>Analysis Factors</h4>
+            {analysis.analysis?.reasons?.length > 0 && (
+              <div className="analysisReasons">
+                <h4>Analysis Factors</h4>
 
-          <ul>
-            {analysis.analysis.reasons.map(
-              (reason, index) => (
-                <li key={index}>{reason}</li>
-              )
+                <ul>
+                  {analysis.analysis.reasons.map(
+                    (reason, index) => (
+                      <li key={index}>
+                        {reason}
+                      </li>
+                    )
+                  )}
+                </ul>
+              </div>
             )}
-          </ul>
-        </div>
+          </div>
+        </>
       )}
-    </div>
-  </>
-)}
     </>
   );
 }
-
-
-
-          {/* TALTEEN:
-            Final-document data:
-              charCount   — document character count (number)
-              operations  — raw writing operations from the changelog (an array).
-                            Each item looks like:
-                              { type: "insert" | "delete", length, timestamp, author, ... }
-                            operations.length is the total number of edits. For most
-                            displays prefer `metrics` below (it already has the
-                            typed/deleted counts, pauses, etc.); use operations only
-                            if you want the raw list or a per-type breakdown.
-
-            backendStatus — save result: { ok, id } if saved, or { ok: false, message }
-
-            metrics — behavioural metrics computed by the backend (null until a
-            successful save). Fields:
-              metrics.typedCharCount     — characters inserted
-              metrics.deletedCharCount   — characters deleted
-              metrics.pastedCharCount    — characters pasted (0 until paste detection)
-              metrics.pasteToTypeRatio   — pasted / typed (or null)
-              metrics.editEventCount     — number of delete actions
-              metrics.longPauseCount     — pauses longer than 2s
-              metrics.totalWritingTimeMs — first-to-last edit span, in ms
-
-            Example:
-              <p>Characters:<b> {charCount}</b></p>
-              {metrics && <p>Typed:<b> {metrics.typedCharCount}</b> · Deleted:<b> {metrics.deletedCharCount}</b></p>}
-            */}
