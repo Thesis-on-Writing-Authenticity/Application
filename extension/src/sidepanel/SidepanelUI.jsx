@@ -4,6 +4,7 @@ import Metrics from "../components/Metrics";
 import DocumentStats from "../components/DocumentStats";
 import { buildUserStats } from "../replay/statistics";
 import "./SidePanelUI.css";
+import Analysis from "../components/Analysis";
 
 export default function SidePanelUI({
   loading,
@@ -19,9 +20,10 @@ export default function SidePanelUI({
   charCount,
   backendStatus,
   metrics,
-})
-
-{
+  analysis,
+  analysisLoading,
+  analysisError,
+}) {
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -46,16 +48,14 @@ export default function SidePanelUI({
         onClick={analyzeDocument}
         disabled={analyzing}
         >
-        {analyzing ? "Analyzing... this may take a minute or two" : "Analyze Document"}
+        {analyzing ? "Analyzing... this may take a second" : "Analyze Document"}
       </button>
 
       {documentData && (
         <div className="resultsContainer">
           {/*{googleToken && <h3>✅ Google connected</h3>}*/}
 
-          {/* COMPONENTS*/}
-
-          {/* INITIAL STATISTICS */}
+          {/*QUICK STATISTICS*/}
           <DocumentStats
             wordCount={wordCount}
             charCount={charCount}
@@ -63,14 +63,23 @@ export default function SidePanelUI({
             revisions={revisions}
           />
 
-          {/* PLAYBACK VIEWER (Replay Player) */}
+          {/* CONTRIBUTIONS (StatsBar)*/}
+          <StatsBar
+            stats={buildUserStats(frames)}
+          />
+
+          {/*ANALYSIS RESULTS (Analysis)*/}
+          <Analysis analysis={analysis} />
+
+          {/*REPLAY PLAYER (ReplayPlayer)*/}
           <PlaybackViewer frames={frames} />
 
           {/* BEHAVIOURAL METRICS (Metrics)*/}
-          <Metrics metrics={metrics} backendStatus={backendStatus} />
-
-          {/* CONTRIBUTIONS BY USER (StatsBar) */}
-          <StatsBar stats={buildUserStats(frames)} />
+          <Metrics
+            metrics={metrics}
+            backendStatus={backendStatus}
+            analysis={analysis}
+          />
         </div>
       )}
     </div>

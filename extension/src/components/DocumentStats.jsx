@@ -6,7 +6,6 @@ export default function DocumentStats({
 }) {
   return (
     <>
-      <hr />
       <h3>Quick Statistics</h3>
 
       <table

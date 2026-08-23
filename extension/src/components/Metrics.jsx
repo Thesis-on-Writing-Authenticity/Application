@@ -1,7 +1,12 @@
 import "./Metrics.css";
+import { formatWritingDuration, formatPercentage } from "../utils/formatters";
 
-export default function Metrics({ metrics, backendStatus }) {
-  if (!metrics && !backendStatus) {
+export default function Metrics({
+  metrics,
+  backendStatus,
+  analysis,
+}) {
+  if (!metrics && !backendStatus && !analysis) {
     return null;
   }
 
@@ -13,13 +18,21 @@ export default function Metrics({ metrics, backendStatus }) {
 
   const maxEditing = Math.max(
     metrics?.editEventCount ?? 0,
-    metrics?.longPauseCount ?? 0
+    metrics?.shortPauseCount ?? 0,
+    metrics?.longPauseCount ?? 0,
+    metrics?.veryLongPauseCount ?? 0
   );
 
   const getWidth = (value, max) => {
-    if (!value || !max) return "0%";
+    if (!value || !max) {
+      return "0%";
+    }
+
     return `${(value / max) * 100}%`;
   };
+
+  const typedCharCount = metrics?.typedCharCount ?? 0;
+  const pastedCharCount = metrics?.pastedCharCount ?? 0;
 
   const totalCharacters =
     (metrics?.typedCharCount ?? 0) + (metrics?.pastedCharCount ?? 0);
@@ -42,9 +55,35 @@ export default function Metrics({ metrics, backendStatus }) {
       ? (metrics?.deletedCharCount ?? 0) / metrics.typedCharCount
       : null;
 
+  const pastedPercentage =
+    totalCharacters > 0
+      ? (pastedCharCount / totalCharacters) * 100
+      : 0;
+
+  const sessionBreakCount = metrics?.sessionBreakCount ?? 0;
+  const sessionBreakTotalMs = metrics?.sessionBreakTotalMs ?? 0;
+
+  const shortPause = metrics.shortPauseCount ?? 0;
+  const longPause = metrics.longPauseCount ?? 0;
+  const veryLongPause = metrics.veryLongPauseCount ?? 0;
+
+  const totalPauseCount =
+    shortPause + longPause + veryLongPause;
+
+  const shortPausePercentage =
+    totalPauseCount === 0
+      ? 0
+      : (shortPause / totalPauseCount) * 100;
+
+  const longPausePercentage =
+    totalPauseCount === 0
+      ? 0
+      : (longPause / totalPauseCount) * 100;
+
   return (
     <>
       <hr />
+
       <h3>Behavioural Metrics</h3>
 
       {metrics && (
@@ -53,40 +92,55 @@ export default function Metrics({ metrics, backendStatus }) {
 
           <div className="metricRow">
             <span>Typed</span>
+
             <div className="metricBarContainer">
               <div
                 className="metricBar"
                 style={{
-                  width: getWidth(metrics.typedCharCount, maxCharacters),
+                  width: getWidth(
+                    metrics.typedCharCount,
+                    maxCharacters
+                  ),
                 }}
               />
             </div>
+
             <b>{metrics.typedCharCount}</b>
           </div>
 
           <div className="metricRow">
             <span>Pasted</span>
+
             <div className="metricBarContainer">
               <div
                 className="metricBarPasted"
                 style={{
-                  width: getWidth(metrics.pastedCharCount, maxCharacters),
+                  width: getWidth(
+                    metrics.pastedCharCount,
+                    maxCharacters
+                  ),
                 }}
               />
             </div>
+
             <b>{metrics.pastedCharCount}</b>
           </div>
 
           <div className="metricRow">
             <span>Deleted</span>
+
             <div className="metricBarContainer">
               <div
                 className="metricBarDeleted"
                 style={{
-                  width: getWidth(metrics.deletedCharCount, maxCharacters),
+                  width: getWidth(
+                    metrics.deletedCharCount,
+                    maxCharacters
+                  ),
                 }}
               />
             </div>
+
             <b>{metrics.deletedCharCount}</b>
           </div>
 
@@ -96,7 +150,7 @@ export default function Metrics({ metrics, backendStatus }) {
             {/* TYPED VS PASTED */}
             <div className="donutChart">
               <div
-                className="donut"
+                className="donut typedPastedDonut"
                 style={{
                   "--typed-percentage": `${typedPercentage}%`,
                 }}
@@ -173,79 +227,90 @@ export default function Metrics({ metrics, backendStatus }) {
 
           <div className="metricRow">
             <span>Delete Events</span>
+
             <div className="metricBarContainer">
               <div
                 className="metricBarDeleted"
                 style={{
-                  width: getWidth(metrics.editEventCount, maxEditing),
+                  width: getWidth(
+                    metrics.editEventCount,
+                    maxEditing
+                  ),
                 }}
               />
             </div>
+
             <b>{metrics.editEventCount}</b>
           </div>
 
-          <div className="metricRow">
-            <span>Long Pauses</span>
-            <div className="metricBarContainer">
-              <div
-                className="metricBar"
-                style={{
-                  width: getWidth(metrics.longPauseCount, maxEditing),
-                }}
-              />
+          <h4>Pause Activity</h4>
+
+          {/* PAUSES DONUT */}
+
+          <div className="pauseDonutChart">
+            <div
+              className="donut pauseDonut"
+              style={{
+                "--short-pause-percentage": `${shortPausePercentage}%`,
+                "--short-long-pause-percentage": `${shortPausePercentage + longPausePercentage}%`,
+              }}
+            >
+              <div className="donutCenter">
+                {totalPauseCount}
+              </div>
             </div>
-            <b>{metrics.longPauseCount}</b>
+
+            <div className="donutLegend">
+              <div>
+                <span className="legendDot shortPauseDot"></span>
+                Short Pauses: <b>{metrics.shortPauseCount ?? 0}</b>
+              </div>
+
+              <div>
+                <span className="legendDot longPauseDot"></span>
+                Long Pauses: <b>{metrics.longPauseCount ?? 0}</b>
+              </div>
+
+              <div>
+                <span className="legendDot veryLongPauseDot"></span>
+                Very Long Pauses: <b>{metrics.veryLongPauseCount ?? 0}</b>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <span>First-to-last edit span </span>
-            <b>
-              {(metrics.totalWritingTimeMs / 3600000).toFixed(2)} h
-            </b>
-          </div>
+          {sessionBreakCount > 0 && (
+            <>
+              <div className="metricRow sessionBreakRow">
+                <span>Breaks (10min+)</span>
+
+                <span className="sessionBreakDetail">
+                  <b>{sessionBreakCount} break
+                    {sessionBreakCount === 1 ? "" : "s"}
+                  </b>
+                  <span>, totalling </span>
+                  <b>{formatWritingDuration(sessionBreakTotalMs)}</b>
+                </span>
+              </div>
+
+              <div className="metricRow sessionBreakRow">
+                <span>Active writing time</span>
+
+                <b>
+                  {formatWritingDuration(metrics.activeWritingTimeMs)}
+                </b>
+              </div>
+
+              <div className="metricRow sessionBreakRow">
+                <span>First-to-last edit span</span>
+
+                <b>
+                  {formatWritingDuration(metrics.totalWritingTimeMs)}
+                </b>
+              </div>
+            </>
+          )}
         </>
-      )}
-
-      {backendStatus && (
-        <p>
-          Backend:
-          <b>
-            {" "}
-            {backendStatus.ok
-              ? `Saved successfully (ID ${backendStatus.id})`
-              : backendStatus.message}
-          </b>
-        </p>
       )}
     </>
   );
 }
-
-
-          {/* TALTEEN:
-            Final-document data:
-              charCount   — document character count (number)
-              operations  — raw writing operations from the changelog (an array).
-                            Each item looks like:
-                              { type: "insert" | "delete", length, timestamp, author, ... }
-                            operations.length is the total number of edits. For most
-                            displays prefer `metrics` below (it already has the
-                            typed/deleted counts, pauses, etc.); use operations only
-                            if you want the raw list or a per-type breakdown.
-
-            backendStatus — save result: { ok, id } if saved, or { ok: false, message }
-
-            metrics — behavioural metrics computed by the backend (null until a
-            successful save). Fields:
-              metrics.typedCharCount     — characters inserted
-              metrics.deletedCharCount   — characters deleted
-              metrics.pastedCharCount    — characters pasted (0 until paste detection)
-              metrics.pasteToTypeRatio   — pasted / typed (or null)
-              metrics.editEventCount     — number of delete actions
-              metrics.longPauseCount     — pauses longer than 2s
-              metrics.totalWritingTimeMs — first-to-last edit span, in ms
-
-            Example:
-              <p>Characters:<b> {charCount}</b></p>
-              {metrics && <p>Typed:<b> {metrics.typedCharCount}</b> · Deleted:<b> {metrics.deletedCharCount}</b></p>}
-            */}

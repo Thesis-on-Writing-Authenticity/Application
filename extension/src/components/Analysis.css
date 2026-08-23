@@ -1,0 +1,100 @@
+.authenticityAnalysis {
+  margin-top: 12px;
+}
+
+.scoreHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.scoreLabel {
+  display: block;
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.scoreValue {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.scoreVerdict {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: capitalize;
+
+  padding: 6px 10px;
+  border-radius: 6px;
+
+  background: #f0f0f0;
+  color: #333;
+
+  white-space: nowrap;
+}
+
+.scoreBarContainer {
+  width: 100%;
+  height: 12px;
+  background: #e5e5e5;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.scoreBar {
+  height: 100%;
+  border-radius: 999px;
+  background: #3eb0b4;
+  transition: width 0.5s ease;
+}
+
+.analysisReasons {
+  margin-top: 16px;
+}
+
+.analysisReasons h4 {
+  margin-bottom: 8px;
+}
+
+.analysisReasons ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.analysisReasons li {
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+@media (max-width: 360px) {
+  .metricRow {
+    grid-template-columns: 80px 1fr 50px;
+  }
+
+  .pasteTypeChart {
+    gap: 14px;
+  }
+
+  .donut {
+    width: 90px;
+    height: 90px;
+    min-width: 90px;
+  }
+
+  .donutCenter {
+    width: 60px;
+    height: 60px;
+  }
+
+  .donutLegend {
+    font-size: 12px;
+  }
+
+  .scoreValue {
+    font-size: 28px;
+  }
+}

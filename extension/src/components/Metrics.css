@@ -1,6 +1,8 @@
+/* Metrics styles */
+
 .metricRow {
   display: grid;
-  grid-template-columns: 90px 1fr 35px;
+  grid-template-columns: 90px 1fr 55px;
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
@@ -50,20 +52,23 @@
   font-size: 12px;
 }
 
-.pasteTypeChart {
+.sessionBreakRow {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 20px;
-  margin: 15px 0;
+  gap: 8px;
+  white-space: nowrap;
 }
+
+
+/* Donut chart styles */
 
 .donutCharts {
   display: flex;
   margin-top: 20px;
-  gap: 20px;
+  gap: 15px;
   align-items: center;
   justify-content: center;
+  width: 100%;
 }
 
 .pasteTypeChart {
@@ -74,6 +79,25 @@
   margin: 15px 0;
 }
 
+.typedDeletedDonutChart {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin: 15px 0;
+}
+
+.pauseDonutChart {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin: 15px 0;
+}
+
+
+/* Donut styles */
+
 .donut {
   width: 80px;
   height: 80px;
@@ -82,10 +106,11 @@
   align-items: center;
   justify-content: center;
 
-  background: conic-gradient(
-    #3eb0b4 0% var(--typed-percentage),
-    #4a3eb4 var(--typed-percentage) 100%
-  );
+}
+
+.donutLegend {
+  font-size: 13px;
+  line-height: 1.8;
 }
 
 .donutCenter {
@@ -94,10 +119,30 @@
   border-radius: 50%;
   background: #dddcdc;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   font-weight: bold;
   font-size: 10px;
+}
+
+.donutLegend > div {
+  display: flex;
+  grid-template-columns: 9px auto;
+  column-gap: 7px;
+  align-items: center;
+}
+
+.donutLegend b {
+  font-weight: 600;
+  margin-left: 2px;
+}
+
+.typedPastedDonut {
+  background: conic-gradient(
+    #3eb0b4 0% var(--typed-percentage),
+    #4a3eb4 var(--typed-percentage) 100%
+  );
 }
 
 .typedDeletedDonut {
@@ -107,17 +152,23 @@
   );
 }
 
-.donutLegend {
-  font-size: 13px;
-  line-height: 1.8;
+.pauseDonut {
+  background: conic-gradient(
+    #3eb0b4 0% var(--short-pause-percentage),
+    #4a3eb4 var(--short-pause-percentage) var(--short-long-pause-percentage),
+    #be8d21 var(--short-long-pause-percentage) 100%
+  );
 }
+
+
+/* Dot styles */
 
 .legendDot {
   display: inline-block;
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  margin-right: 6px;
+  grid-row: span 2;
 }
 
 .typedDot {
@@ -128,6 +179,22 @@
   background-color: #4a3eb4;
 }
 
+.deletedDot {
+  background-color: #be8d21;
+}
+
+.shortPauseDot {
+  background-color: #3eb0b4;
+}
+
+.longPauseDot {
+  background-color: #4a3eb4;
+}
+
+.veryLongPauseDot {
+  background-color: #be8d21;
+}
+
 .pastedTypedRatioDot {
   background: linear-gradient(
     to right,
@@ -136,14 +203,11 @@
   );
 }
 
-.deletedDot {
-  background-color: #be8d21;
-}
-
 .typedDeletedRatioDot {
   background: linear-gradient(
     to right,
     #3eb0b4 50%,
     #be8d21 50%
   );
+  background-color: #1976d2;
 }

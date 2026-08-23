@@ -57,7 +57,6 @@ POST /api/sessions
   "documentId": "google-doc-id",
   "documentTitle": "My Essay",
   "source": "google-docs",
-  "scenario": "human",        // optional: "human" | "ai-pasted" | "ai-retyped"
   "startedAt": "2026-07-20T10:00:00.000Z"  // optional; defaults to now
 }
 ```
@@ -106,13 +105,49 @@ POST /api/sessions/:id/events
 
 `GET /api/sessions/export` returns one flattened row per event across all
 sessions — the handoff to the offline analysis. JSON by default, or CSV with
-`?format=csv`. Columns: `sessionId, documentId, scenario, sessionStartedAt,
+`?format=csv`. Columns: `sessionId, documentId, documentTitle, sessionStartedAt,
 sessionEndedAt, type, at, length, position, start, end, author, docSession,
 index`.
 
 ```bash
 curl "localhost:3000/api/sessions/export?format=csv" > sessions.csv
 ```
+
+## Offline analysis
+
+`analysis/compare_scenarios.py` (in the repository root) compares the writing
+behaviour of the evaluation scenarios using the export above.
+
+```bash
+curl "localhost:3000/api/sessions/export?format=csv" > evaluation-sessions.csv
+python3 analysis/compare_scenarios.py evaluation-sessions.csv
+
+# with box plots (needs matplotlib, and several sessions per scenario)
+python3 analysis/compare_scenarios.py evaluation-sessions.csv --plots
+```
+
+It groups the exported events by session, derives each session's scenario from
+its document title (`01-human` → `human`), computes per-session features, and
+prints them averaged per scenario. Features: insert/delete/paste counts, typed,
+pasted and deleted characters, mean and maximum insert size, paste-to-type
+ratio, long pauses, and `rhythm_cv` — the variability of the gaps between typing
+events, which is high for natural bursty typing and low for evenly paced
+retyping.
+
+Exported data and generated figures are gitignored: the raw samples contain
+document text and user identifiers and are kept out of the repository.
+
+### Where the heuristics live
+
+Paste and pause classification happens **once**, in the extension
+(`extension/src/api/writingEvents.js`), before the events are sent: inserts of
+at least 15 characters become `PASTE`, and gaps longer than two seconds become
+`PAUSE`. The backend stores those event types as given, and the analysis script
+reads them — it does not re-apply the thresholds. Changing a threshold therefore
+means changing it in the extension and re-collecting, and it also guarantees
+that the figures shown in the side panel and the numbers used in the analysis
+always agree. `rhythm_cv` is the exception: it is computed only in the analysis
+script and is not shown in the extension.
 
 ## How the extension sends events
 
