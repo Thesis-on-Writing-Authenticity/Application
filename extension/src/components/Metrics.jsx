@@ -1,37 +1,5 @@
 import "./Metrics.css";
-
-function formatWritingDuration(ms) {
-  if (!Number.isFinite(ms) || ms <= 0) {
-    return "0 min";
-  }
-
-  const totalMinutes = Math.round(ms / 60000);
-
-  if (totalMinutes < 60) {
-    return `${totalMinutes} min`;
-  }
-
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  if (minutes === 0) {
-    return `${hours} h`;
-  }
-
-  return `${hours} h ${minutes} min`;
-}
-
-function formatPercentage(value) {
-  if (!Number.isFinite(value)) {
-    return "0%";
-  }
-
-  if (Number.isInteger(value)) {
-    return `${value}%`;
-  }
-
-  return `${value.toFixed(1)}%`;
-}
+import { formatWritingDuration, formatPercentage } from "../utils/formatters";
 
 export default function Metrics({
   metrics,
@@ -67,12 +35,25 @@ export default function Metrics({
   const pastedCharCount = metrics?.pastedCharCount ?? 0;
 
   const totalCharacters =
-    typedCharCount + pastedCharCount;
+    (metrics?.typedCharCount ?? 0) + (metrics?.pastedCharCount ?? 0);
 
   const typedPercentage =
     totalCharacters > 0
-      ? (typedCharCount / totalCharacters) * 100
+      ? ((metrics?.typedCharCount ?? 0) / totalCharacters) * 100
       : 0;
+
+  const totalTypedDeleted =
+    (metrics?.typedCharCount ?? 0) + (metrics?.deletedCharCount ?? 0);
+
+  const typedDeletedPercentage =
+    totalTypedDeleted > 0
+      ? ((metrics?.typedCharCount ?? 0) / totalTypedDeleted) * 100
+      : 0;
+
+  const deletedToTypedRatio =
+    (metrics?.typedCharCount ?? 0) > 0
+      ? (metrics?.deletedCharCount ?? 0) / metrics.typedCharCount
+      : null;
 
   const pastedPercentage =
     totalCharacters > 0
@@ -81,6 +62,23 @@ export default function Metrics({
 
   const sessionBreakCount = metrics?.sessionBreakCount ?? 0;
   const sessionBreakTotalMs = metrics?.sessionBreakTotalMs ?? 0;
+
+  const shortPause = metrics.shortPauseCount ?? 0;
+  const longPause = metrics.longPauseCount ?? 0;
+  const veryLongPause = metrics.veryLongPauseCount ?? 0;
+
+  const totalPauseCount =
+    shortPause + longPause + veryLongPause;
+
+  const shortPausePercentage =
+    totalPauseCount === 0
+      ? 0
+      : (shortPause / totalPauseCount) * 100;
+
+  const longPausePercentage =
+    totalPauseCount === 0
+      ? 0
+      : (longPause / totalPauseCount) * 100;
 
   return (
     <>
@@ -115,7 +113,7 @@ export default function Metrics({
 
             <div className="metricBarContainer">
               <div
-                className="metricBar"
+                className="metricBarPasted"
                 style={{
                   width: getWidth(
                     metrics.pastedCharCount,
@@ -133,7 +131,7 @@ export default function Metrics({
 
             <div className="metricBarContainer">
               <div
-                className="metricBar"
+                className="metricBarDeleted"
                 style={{
                   width: getWidth(
                     metrics.deletedCharCount,
@@ -146,6 +144,85 @@ export default function Metrics({
             <b>{metrics.deletedCharCount}</b>
           </div>
 
+          {/* DONUT CHARTS */}
+          <div className="donutCharts">
+
+            {/* TYPED VS PASTED */}
+            <div className="donutChart">
+              <div
+                className="donut typedPastedDonut"
+                style={{
+                  "--typed-percentage": `${typedPercentage}%`,
+                }}
+              >
+                <div className="donutCenter">
+                  {metrics.pasteToTypeRatio == null
+                    ? "-"
+                    : metrics.pasteToTypeRatio.toFixed(2)}
+                </div>
+              </div>
+
+              <div className="donutLegend">
+                <div>
+                  <span className="legendDot typedDot"></span>
+                  Typed: <b>{metrics.typedCharCount}</b>
+                </div>
+
+                <div>
+                  <span className="legendDot pastedDot"></span>
+                  Pasted: <b>{metrics.pastedCharCount}</b>
+                </div>
+
+                <div>
+                  <span className="legendDot pastedTypedRatioDot"></span>
+                  Ratio: <b>
+                    {metrics.pasteToTypeRatio == null
+                      ? "-"
+                      : metrics.pasteToTypeRatio.toFixed(2)}
+                  </b>
+                </div>
+              </div>
+            </div>
+
+            {/* TYPED VS DELETED */}
+            <div className="donutChart">
+              <div
+                className="donut typedDeletedDonut"
+                style={{
+                  "--typed-deleted-percentage": `${typedDeletedPercentage}%`,
+                }}
+              >
+                <div className="donutCenter">
+                  {deletedToTypedRatio == null
+                    ? "-"
+                    : deletedToTypedRatio.toFixed(2)}
+                </div>
+              </div>
+
+              <div className="donutLegend">
+                <div>
+                  <span className="legendDot typedDot"></span>
+                  Typed: <b>{metrics.typedCharCount}</b>
+                </div>
+
+                <div>
+                  <span className="legendDot deletedDot"></span>
+                  Deleted: <b>{metrics.deletedCharCount}</b>
+                </div>
+
+                <div>
+                  <span className="legendDot typedDeletedRatioDot"></span>
+                  Ratio: <b>
+                    {deletedToTypedRatio == null
+                      ? "-"
+                      : deletedToTypedRatio.toFixed(2)}
+                  </b>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
           <h4>Editing Behaviour</h4>
 
           <div className="metricRow">
@@ -153,7 +230,7 @@ export default function Metrics({
 
             <div className="metricBarContainer">
               <div
-                className="metricBar"
+                className="metricBarDeleted"
                 style={{
                   width: getWidth(
                     metrics.editEventCount,
@@ -168,213 +245,70 @@ export default function Metrics({
 
           <h4>Pause Activity</h4>
 
-          <div className="metricRow">
-            <span>Short Pauses (1&ndash;5s)</span>
+          {/* PAUSES DONUT */}
 
-            <div className="metricBarContainer">
-              <div
-                className="metricBar"
-                style={{
-                  width: getWidth(
-                    metrics.shortPauseCount,
-                    maxEditing
-                  ),
-                }}
-              />
-            </div>
-
-            <b>{metrics.shortPauseCount ?? 0}</b>
-          </div>
-
-          <div className="metricRow">
-            <span>Long Pauses (5&ndash;15s)</span>
-
-            <div className="metricBarContainer">
-              <div
-                className="metricBar"
-                style={{
-                  width: getWidth(
-                    metrics.longPauseCount,
-                    maxEditing
-                  ),
-                }}
-              />
-            </div>
-
-            <b>{metrics.longPauseCount ?? 0}</b>
-          </div>
-
-          <div className="metricRow">
-            <span>Very Long Pauses (15s+)</span>
-
-            <div className="metricBarContainer">
-              <div
-                className="metricBar"
-                style={{
-                  width: getWidth(
-                    metrics.veryLongPauseCount,
-                    maxEditing
-                  ),
-                }}
-              />
-            </div>
-
-            <b>{metrics.veryLongPauseCount ?? 0}</b>
-          </div>
-
-          {sessionBreakCount > 0 && (
-            <div className="metricRow sessionBreakRow">
-              <span>Breaks (10min+)</span>
-
-              <span className="sessionBreakDetail">
-                {sessionBreakCount} break
-                {sessionBreakCount === 1 ? "" : "s"}, totalling{" "}
-                {formatWritingDuration(sessionBreakTotalMs)}
-              </span>
-            </div>
-          )}
-
-          <div className="pasteTypeChart">
+          <div className="pauseDonutChart">
             <div
-              className="donut"
+              className="donut pauseDonut"
               style={{
-                background: `conic-gradient(
-                  #2e7d32 0% ${typedPercentage}%,
-                  #1976d2 ${typedPercentage}% 100%
-                )`,
+                "--short-pause-percentage": `${shortPausePercentage}%`,
+                "--short-long-pause-percentage": `${shortPausePercentage + longPausePercentage}%`,
               }}
             >
               <div className="donutCenter">
-                <strong>
-                  {formatPercentage(pastedPercentage)}
-                </strong>
-
-                <span>pasted</span>
+                {totalPauseCount}
               </div>
             </div>
 
             <div className="donutLegend">
               <div>
-                <span className="legendDot typedDot"></span>
-
-                <span>Typed</span>
-
-                <b>
-                  {typedCharCount} (
-                  {formatPercentage(typedPercentage)})
-                </b>
+                <span className="legendDot shortPauseDot"></span>
+                Short Pauses: <b>{metrics.shortPauseCount ?? 0}</b>
               </div>
 
               <div>
-                <span className="legendDot pastedDot"></span>
+                <span className="legendDot longPauseDot"></span>
+                Long Pauses: <b>{metrics.longPauseCount ?? 0}</b>
+              </div>
 
-                <span>Pasted</span>
-
-                <b>
-                  {pastedCharCount} (
-                  {formatPercentage(pastedPercentage)})
-                </b>
+              <div>
+                <span className="legendDot veryLongPauseDot"></span>
+                Very Long Pauses: <b>{metrics.veryLongPauseCount ?? 0}</b>
               </div>
             </div>
-          </div>
-
-  
-          <div>
-            <span>First-to-last edit span </span>
-
-            <b>
-              {formatWritingDuration(
-                metrics.totalWritingTimeMs
-              )}
-            </b>
           </div>
 
           {sessionBreakCount > 0 && (
-            <div>
-              <span>Active writing time </span>
+            <>
+              <div className="metricRow sessionBreakRow">
+                <span>Breaks (10min+)</span>
 
-              <b>
-                {formatWritingDuration(
-                  metrics.activeWritingTimeMs
-                )}
-              </b>
-            </div>
-          )}
-        </>
-      )}
-
-      {backendStatus && (
-        <p>
-          Backend:
-          <b>
-            {" "}
-            {backendStatus.ok
-              ? `Saved successfully (ID ${backendStatus.id})`
-              : backendStatus.message}
-          </b>
-        </p>
-      )}
-
-      {analysis && (
-        <>
-          <hr />
-
-          <div className="authenticityAnalysis">
-            <h3>Authenticity Analysis</h3>
-
-            <div className="scoreHeader">
-              <div>
-                <span className="scoreLabel">
-                  Authenticity Score
+                <span className="sessionBreakDetail">
+                  <b>{sessionBreakCount} break
+                    {sessionBreakCount === 1 ? "" : "s"}
+                  </b>
+                  <span>, totalling </span>
+                  <b>{formatWritingDuration(sessionBreakTotalMs)}</b>
                 </span>
-
-                <div className="scoreValue">
-                  {Math.round(
-                    (analysis.analysis?.score ?? 0) * 100
-                  )}
-                  %
-                </div>
               </div>
 
-              <div className="scoreVerdict">
-                {(analysis.analysis?.verdict ??
-                  "unknown"
-                ).replace(/_/g, " ")}
+              <div className="metricRow sessionBreakRow">
+                <span>Active writing time</span>
+
+                <b>
+                  {formatWritingDuration(metrics.activeWritingTimeMs)}
+                </b>
               </div>
-            </div>
 
-            <div className="scoreBarContainer">
-              <div
-                className="scoreBar"
-                style={{
-                  width: `${Math.max(
-                    0,
-                    Math.min(
-                      100,
-                      (analysis.analysis?.score ??
-                        0) * 100
-                    )
-                  )}%`,
-                }}
-              />
-            </div>
+              <div className="metricRow sessionBreakRow">
+                <span>First-to-last edit span</span>
 
-            {analysis.analysis?.reasons?.length > 0 && (
-              <div className="analysisReasons">
-                <h4>Analysis Factors</h4>
-
-                <ul>
-                  {analysis.analysis.reasons.map(
-                    (reason, index) => (
-                      <li key={index}>
-                        {reason}
-                      </li>
-                    )
-                  )}
-                </ul>
+                <b>
+                  {formatWritingDuration(metrics.totalWritingTimeMs)}
+                </b>
               </div>
-            )}
-          </div>
+            </>
+          )}
         </>
       )}
     </>

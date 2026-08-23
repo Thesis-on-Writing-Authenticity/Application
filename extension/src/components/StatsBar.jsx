@@ -27,16 +27,16 @@ export default function StatsBar({ stats }) {
           {stats.map((user) => (
             <tr key={user.name}>
               <td>{user.name}</td>
-              <td style={{ textAlign: "center", color: "#2e7d32" }}>
+              <td style={{ textAlign: "center" }}>
                 {user.wordsAdded}
               </td>
-              <td style={{ textAlign: "center", color: "#d32f2f" }}>
+              <td style={{ textAlign: "center" }}>
                 {user.wordsDeleted}
               </td>
-              <td style={{ textAlign: "center", color: "#2e7d32" }}>
+              <td style={{ textAlign: "center" }}>
                 {user.charsAdded}
               </td>
-              <td style={{ textAlign: "center", color: "#d32f2f" }}>
+              <td style={{ textAlign: "center" }}>
                 {user.charsDeleted}
               </td>
             </tr>

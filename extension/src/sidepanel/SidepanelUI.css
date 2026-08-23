@@ -9,7 +9,7 @@
 .analyzeButton {
   width: 100%;
   padding: 12px 16px;
-  background-color: #2e7d32;
+  background-color: #3eb0b4;
   color: white;
   border: none;
   border-radius: 8px;
@@ -20,20 +20,48 @@
 }
 
 .analyzeButton:hover:not(:disabled) {
-  background-color: #1b5e20;
+  background-color: #2b797c;
 }
 
 .analyzeButton:disabled {
-  opacity: .6;
+  opacity: .8;
   cursor: default;
+  background-color: #2b797c;
 }
 
 .resultsContainer {
   margin-top: 20px;
   padding: 16px;
 
-  background-color: #dddcdc;
+  background-color: #e0dcd9;
   border-radius: 8px;
 
   font-size: 14px;
+}
+
+.documentInfo {
+  display: flex;
+  margin-bottom: 20px;
+}
+
+.documentInfoItem:first-child {
+  width: calc(60% - 30px);
+  min-width: 0;
+  margin-right: 30px;
+}
+
+.documentInfoItem:last-child {
+  min-width: 0;
+}
+
+.documentInfoItem h3 {
+  margin: 0 0 3px 0;
+  white-space: nowrap;
+}
+
+.documentInfoItem p {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
