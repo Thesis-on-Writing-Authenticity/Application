@@ -3,20 +3,21 @@
   background-color: #fff;
   border: 1px solid #ddd;
   padding: 10px;
-  min-height: 180px;
+  height: 300px;
+  overflow-y: auto;
   border-radius: 6px;
   font-family: Arial;
   font-size: 14;
 }
 
 .insertHighlight {
-  background-color: #9be79b;
+  background-color: #9fcecf;
   border-radius: 3px;
 }
 
 .deleteHighlight {
-  color: #d32f2f;
+  color: #a06e02;
   text-decoration: line-through;
-  background-color: #ffd6d6;
+  background-color: #e7d8b6;
   border-radius: 3px;
 }

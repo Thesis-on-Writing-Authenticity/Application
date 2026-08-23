@@ -13,7 +13,7 @@ const app = express();
 // For a local prototype we allow all origins; this would be tightened for
 // any real deployment.
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "10mb" })); // For larger amounts of writing data (e.g. long documents)
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true });

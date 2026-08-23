@@ -22,17 +22,25 @@ export default function Metrics({ metrics, backendStatus }) {
   };
 
   const totalCharacters =
-  metrics.typedCharCount + metrics.pastedCharCount;
+    (metrics?.typedCharCount ?? 0) + (metrics?.pastedCharCount ?? 0);
 
   const typedPercentage =
     totalCharacters > 0
-      ? (metrics.typedCharCount / totalCharacters) * 100
+      ? ((metrics?.typedCharCount ?? 0) / totalCharacters) * 100
       : 0;
 
-  const pastedPercentage =
-    totalCharacters > 0
-      ? (metrics.pastedCharCount / totalCharacters) * 100
+  const totalTypedDeleted =
+    (metrics?.typedCharCount ?? 0) + (metrics?.deletedCharCount ?? 0);
+
+  const typedDeletedPercentage =
+    totalTypedDeleted > 0
+      ? ((metrics?.typedCharCount ?? 0) / totalTypedDeleted) * 100
       : 0;
+
+  const deletedToTypedRatio =
+    (metrics?.typedCharCount ?? 0) > 0
+      ? (metrics?.deletedCharCount ?? 0) / metrics.typedCharCount
+      : null;
 
   return (
     <>
@@ -60,7 +68,7 @@ export default function Metrics({ metrics, backendStatus }) {
             <span>Pasted</span>
             <div className="metricBarContainer">
               <div
-                className="metricBar"
+                className="metricBarPasted"
                 style={{
                   width: getWidth(metrics.pastedCharCount, maxCharacters),
                 }}
@@ -73,7 +81,7 @@ export default function Metrics({ metrics, backendStatus }) {
             <span>Deleted</span>
             <div className="metricBarContainer">
               <div
-                className="metricBar"
+                className="metricBarDeleted"
                 style={{
                   width: getWidth(metrics.deletedCharCount, maxCharacters),
                 }}
@@ -82,13 +90,92 @@ export default function Metrics({ metrics, backendStatus }) {
             <b>{metrics.deletedCharCount}</b>
           </div>
 
+          {/* DONUT CHARTS */}
+          <div className="donutCharts">
+
+            {/* TYPED VS PASTED */}
+            <div className="donutChart">
+              <div
+                className="donut"
+                style={{
+                  "--typed-percentage": `${typedPercentage}%`,
+                }}
+              >
+                <div className="donutCenter">
+                  {metrics.pasteToTypeRatio == null
+                    ? "-"
+                    : metrics.pasteToTypeRatio.toFixed(2)}
+                </div>
+              </div>
+
+              <div className="donutLegend">
+                <div>
+                  <span className="legendDot typedDot"></span>
+                  Typed: <b>{metrics.typedCharCount}</b>
+                </div>
+
+                <div>
+                  <span className="legendDot pastedDot"></span>
+                  Pasted: <b>{metrics.pastedCharCount}</b>
+                </div>
+
+                <div>
+                  <span className="legendDot pastedTypedRatioDot"></span>
+                  Ratio: <b>
+                    {metrics.pasteToTypeRatio == null
+                      ? "-"
+                      : metrics.pasteToTypeRatio.toFixed(2)}
+                  </b>
+                </div>
+              </div>
+            </div>
+
+            {/* TYPED VS DELETED */}
+            <div className="donutChart">
+              <div
+                className="donut typedDeletedDonut"
+                style={{
+                  "--typed-deleted-percentage": `${typedDeletedPercentage}%`,
+                }}
+              >
+                <div className="donutCenter">
+                  {deletedToTypedRatio == null
+                    ? "-"
+                    : deletedToTypedRatio.toFixed(2)}
+                </div>
+              </div>
+
+              <div className="donutLegend">
+                <div>
+                  <span className="legendDot typedDot"></span>
+                  Typed: <b>{metrics.typedCharCount}</b>
+                </div>
+
+                <div>
+                  <span className="legendDot deletedDot"></span>
+                  Deleted: <b>{metrics.deletedCharCount}</b>
+                </div>
+
+                <div>
+                  <span className="legendDot typedDeletedRatioDot"></span>
+                  Ratio: <b>
+                    {deletedToTypedRatio == null
+                      ? "-"
+                      : deletedToTypedRatio.toFixed(2)}
+                  </b>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
           <h4>Editing Behaviour</h4>
 
           <div className="metricRow">
             <span>Delete Events</span>
             <div className="metricBarContainer">
               <div
-                className="metricBar"
+                className="metricBarDeleted"
                 style={{
                   width: getWidth(metrics.editEventCount, maxEditing),
                 }}
@@ -110,48 +197,18 @@ export default function Metrics({ metrics, backendStatus }) {
             <b>{metrics.longPauseCount}</b>
           </div>
 
-          <div className="pasteTypeChart">
-            <div
-              className="donut"
-              style={{
-                background: `conic-gradient(
-                  #2e7d32 0% ${typedPercentage}%,
-                  #1976d2 ${typedPercentage}% 100%
-                )`,
-              }}
-            >
-              <div className="donutCenter">
-                {metrics.pasteToTypeRatio == null
-                  ? "-"
-                  : metrics.pasteToTypeRatio.toFixed(2)}
-              </div>
-            </div>
-
-            <div className="donutLegend">
-              <div>
-                <span className="legendDot typedDot"></span>
-                Typed: <b>{metrics.typedCharCount}</b>
-              </div>
-
-              <div>
-                <span className="legendDot pastedDot"></span>
-                Pasted: <b>{metrics.pastedCharCount}</b>
-              </div>
-            </div>
-          </div>
-
           <div>
             <span>First-to-last edit span </span>
-              <b>
-                {(metrics.totalWritingTimeMs / 3600000).toFixed(2)} h
-              </b>
-            </div>
-
+            <b>
+              {(metrics.totalWritingTimeMs / 3600000).toFixed(2)} h
+            </b>
+          </div>
         </>
       )}
 
       {backendStatus && (
-        <p>Backend:
+        <p>
+          Backend:
           <b>
             {" "}
             {backendStatus.ok
@@ -163,7 +220,6 @@ export default function Metrics({ metrics, backendStatus }) {
     </>
   );
 }
-
 
 
           {/* TALTEEN:

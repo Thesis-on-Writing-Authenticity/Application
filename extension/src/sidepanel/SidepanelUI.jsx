@@ -15,7 +15,6 @@ export default function SidePanelUI({
   analyzing,
   analyzeDocument,
   frames,
-  // --- Connected from App.jsx, not yet displayed. See the comment below. ---
   operations,
   charCount,
   backendStatus,
@@ -29,26 +28,30 @@ export default function SidePanelUI({
 
   return (
     <div className="sidepanel">
-      <h2>Writing Authenticity</h2>
-      <hr />
 
-      <h3>Document title</h3>
-      <p>{doc?.title}</p>
+    <div className="documentInfo">
+      <div className="documentInfoItem">
+        <h3>Document title</h3>
+        <p>{doc?.title}</p>
+      </div>
 
-      <h3>Document ID</h3>
-      <p>{doc?.id}</p>
+      <div className="documentInfoItem">
+        <h3>Document ID</h3>
+        <p>{doc?.id}</p>
+      </div>
+    </div>
       
       <button
         className="analyzeButton"
         onClick={analyzeDocument}
         disabled={analyzing}
         >
-        {analyzing ? "Analyzing... this may take a few seconds" : "Analyze Document"}
+        {analyzing ? "Analyzing... this may take a minute or two" : "Analyze Document"}
       </button>
 
       {documentData && (
         <div className="resultsContainer">
-          {googleToken && <h3>✅ Google connected</h3>}
+          {/*{googleToken && <h3>✅ Google connected</h3>}*/}
 
           {/* COMPONENTS*/}
 
@@ -63,7 +66,7 @@ export default function SidePanelUI({
           {/* PLAYBACK VIEWER (Replay Player) */}
           <PlaybackViewer frames={frames} />
 
-          {/* METRICS AND BACKEND STATUS (Metrics)*/}
+          {/* BEHAVIOURAL METRICS (Metrics)*/}
           <Metrics metrics={metrics} backendStatus={backendStatus} />
 
           {/* CONTRIBUTIONS BY USER (StatsBar) */}
