@@ -48,7 +48,7 @@ export default function SidePanelUI({
         onClick={analyzeDocument}
         disabled={analyzing}
         >
-        {analyzing ? "Analyzing... this may take a second" : "Analyze Document"}
+        {analyzing ? "Analysing... this may take a second" : "Analyse Document"}
       </button>
 
       {documentData && (
